@@ -362,10 +362,10 @@
             <h2 id="txt-welcome" style="margin-bottom: 20px;">مرحباً بك في سرحان بارتي!</h2>
             
             <div class="social-auth">
-                <button class="btn-social btn-google" onclick="socialLogin('Google')">
+                <button class="btn-social btn-google" onclick="loginWithGoogle()">
                     <i class="fa-brands fa-google"></i> <span id="txt-google">الدخول بواسطة Google</span>
                 </button>
-                <button class="btn-social btn-facebook" onclick="socialLogin('Facebook')">
+                <button class="btn-social btn-facebook" onclick="loginWithFacebook()">
                     <i class="fa-brands fa-facebook-f"></i> <span id="txt-fb">الدخول بواسطة الفيسبوك</span>
                 </button>
             </div>
@@ -412,7 +412,7 @@
                 <small style="color: var(--text-secondary);" id="txt-max-players">الحد الأقصى: 5 لاعبين في الغرفة</small>
             </div>
 
-            <h3 id="txt-players-in">اللاعبون المتواجدون (<span id="player-count">1</span>/5)</h3>
+            <h3 id="txt-players-in">اللاعبون المتواجدون (<span id="player-count">0</span>/5)</h3>
             <div class="players-list" id="players-list"></div>
 
             <button class="btn-primary" id="btn-start-game" onclick="startGame()">بدء اللعبة الآن!</button>
@@ -420,14 +420,16 @@
 
     </div>
 
-    <!-- Firebase Realtime App Script -->
+    <!-- Firebase SDK (Modular Modern Import) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, set, push, onValue, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA2WWgfNCzg3LQ2Nqkp21IsbmbcQzlBDMw",
             authDomain: "salah-52496.firebaseapp.com",
+            databaseURL: "https://salah-52496-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "salah-52496",
             storageBucket: "salah-52496.firebasestorage.app",
             messagingSenderId: "123427587326",
@@ -435,44 +437,90 @@
             measurementId: "G-4SMPNYP7LQ"
         };
 
-       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
 
-// تهيئة Firebase
-const firebaseConfig = {
-  databaseURL: "https://salah-52496-default-rtdb.europe-west1.firebasedatabase.app"
-};
+        // جعل الدوال متاحة للمستند
+        window.loginWithGoogle = async function() {
+            const provider = new GoogleAuthProvider();
+            try {
+                const result = await signInWithPopup(auth, provider);
+                document.getElementById('username').value = result.user.displayName || "لاعب جوجل";
+                if(result.user.photoURL) {
+                    window.selectedAvatar = result.user.photoURL;
+                }
+                alert("تم تسجيل الدخول بنجاح عبر Google!");
+            } catch (error) {
+                console.error("Google Auth Error:", error);
+                alert("حدث خطأ أثناء التسجيل بـ Google: " + error.message);
+            }
+        };
 
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+        window.loginWithFacebook = async function() {
+            const provider = new FacebookAuthProvider();
+            try {
+                const result = await signInWithPopup(auth, provider);
+                document.getElementById('username').value = result.user.displayName || "لاعب فيسبوك";
+                if(result.user.photoURL) {
+                    window.selectedAvatar = result.user.photoURL;
+                }
+                alert("تم تسجيل الدخول بنجاح عبر الفيسبوك!");
+            } catch (error) {
+                console.error("Facebook Auth Error:", error);
+                alert("حدث خطأ أثناء التسجيل بـ Facebook: " + error.message);
+            }
+        };
 
-// إنشاء غرفة جديدة
-function createRoom(roomCode, hostName) {
-  const roomRef = ref(database, 'rooms/' + roomCode);
-  set(roomRef, {
-    host: hostName,
-    players: {
-      player1: hostName
-    },
-    status: "waiting"
-  });
-}
+        window.createRoomInFirebase = function(roomCode, playerData) {
+            const roomRef = ref(database, 'rooms/' + roomCode);
+            set(roomRef, {
+                status: "waiting",
+                createdAt: Date.now()
+            });
 
-// الانضمام لغرفة قائمة
-function joinRoom(roomCode, playerName) {
-  const playersRef = ref(database, `rooms/${roomCode}/players`);
-  const newPlayerRef = push(playersRef);
-  set(newPlayerRef, playerName);
-}
+            const playersRef = ref(database, `rooms/${roomCode}/players`);
+            const newPlayerRef = push(playersRef);
+            set(newPlayerRef, playerData);
 
-// الاستماع للتحديثات اللحظية للغرفة
-function listenToRoom(roomCode, callback) {
-  const roomRef = ref(database, 'rooms/' + roomCode);
-  onValue(roomRef, (snapshot) => {
-    const data = snapshot.val();
-    callback(data);
-  });
-}
+            listenToRoom(roomCode);
+        };
+
+        window.joinRoomInFirebase = async function(roomCode, playerData) {
+            const roomRef = ref(database, 'rooms/' + roomCode);
+            const snapshot = await get(roomRef);
+
+            if (!snapshot.exists()) {
+                alert("عذراً، هذه الغرفة غير موجودة!");
+                return false;
+            }
+
+            const playersRef = ref(database, `rooms/${roomCode}/players`);
+            const playersSnap = await get(playersRef);
+            if(playersSnap.exists()) {
+                const count = Object.keys(playersSnap.val()).length;
+                if(count >= 5) {
+                    alert(translations[currentLang].alertFull);
+                    return false;
+                }
+            }
+
+            const newPlayerRef = push(playersRef);
+            await set(newPlayerRef, playerData);
+            listenToRoom(roomCode);
+            return true;
+        };
+
+        function listenToRoom(roomCode) {
+            const playersRef = ref(database, `rooms/${roomCode}/players`);
+            onValue(playersRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const playersArr = Object.values(data);
+                    window.renderRoomPlayers(playersArr);
+                }
+            });
+        }
     </script>
 
     <script>
@@ -505,10 +553,9 @@ function listenToRoom(roomCode, callback) {
         ];
 
         let currentLang = 'ar';
-        let selectedAvatar = avatars[0].src;
+        window.selectedAvatar = avatars[0].src;
         let username = '';
         let currentRoom = null;
-        let players = [];
 
         window.onload = () => { renderAvatars(); };
 
@@ -571,7 +618,7 @@ function listenToRoom(roomCode, callback) {
             }
             document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
             element.classList.add('selected');
-            selectedAvatar = av.src;
+            window.selectedAvatar = av.src;
         }
 
         function handleImageUpload(e) {
@@ -579,7 +626,7 @@ function listenToRoom(roomCode, callback) {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (event) => {
-                    selectedAvatar = event.target.result;
+                    window.selectedAvatar = event.target.result;
                     alert("تم رفع الصورة بنجاح!");
                 };
                 reader.readAsDataURL(file);
@@ -602,31 +649,34 @@ function listenToRoom(roomCode, callback) {
 
         function createRoom() {
             currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
-            players = [{ name: username, avatar: selectedAvatar, host: true }];
-            updateRoomUI();
+            const playerData = { name: username, avatar: window.selectedAvatar, host: true };
+            document.getElementById('display-room-code').innerText = currentRoom;
+            
+            window.createRoomInFirebase(currentRoom, playerData);
             showScreen('screen-room');
         }
 
-        function joinRoom() {
+        async function joinRoom() {
             const code = document.getElementById('room-code-input').value.trim();
             if (!code) {
                 alert(translations[currentLang].alertRoom);
                 return;
             }
             currentRoom = code;
-            players = [
-                { name: username, avatar: selectedAvatar, host: false }
-            ];
-            updateRoomUI();
-            showScreen('screen-room');
+            const playerData = { name: username, avatar: window.selectedAvatar, host: false };
+            
+            const success = await window.joinRoomInFirebase(currentRoom, playerData);
+            if (success) {
+                document.getElementById('display-room-code').innerText = currentRoom;
+                showScreen('screen-room');
+            }
         }
 
-        function updateRoomUI() {
-            document.getElementById('display-room-code').innerText = currentRoom;
-            document.getElementById('player-count').innerText = players.length;
+        window.renderRoomPlayers = function(playersList) {
+            document.getElementById('player-count').innerText = playersList.length;
             const list = document.getElementById('players-list');
             list.innerHTML = '';
-            players.forEach(p => {
+            playersList.forEach(p => {
                 const card = document.createElement('div');
                 card.className = 'player-card';
                 card.innerHTML = `
@@ -636,15 +686,10 @@ function listenToRoom(roomCode, callback) {
                 `;
                 list.appendChild(card);
             });
-        }
+        };
 
         function startGame() {
             alert("جاري بدء اللعبة مع جميع اللاعبين في الغرفة!");
-        }
-
-        function socialLogin(provider) {
-            document.getElementById('username').value = `لاعب_${provider}`;
-            alert(`تم تسجيل الدخول عبر ${provider}`);
         }
     </script>
 </body>
