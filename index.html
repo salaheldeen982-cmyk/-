@@ -171,7 +171,7 @@
         <!-- Screen 4: Voice Game Arena (Recording Phase) -->
         <div id="screen-game" class="screen">
             <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--gold);" id="stage-indicator">المرحلة 1 / 7</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--gold);" id="stage-indicator">المرحلة 1 / 9</div>
                 <h3 id="stage-title">استمع للصوت وقم بتقليده!</h3>
             </div>
             <div style="margin: 20px 0;">
@@ -354,18 +354,17 @@
     </script>
 
     <script>
-        // الأصوات الحقيقية المضافة شاملة المجموعة الأولى والمجموعة الجديدة
+        // الملفات الصوتية التسعة المرسلة فقط بدون أي إضافة خارجية
         const realSoundList = [
-            { id: 1, name: "عبارة: Game Over 🎮" },
-            { id: 2, name: "عبارة: Goodbye 🐱" },
-            { id: 3, name: "عبارة: I fear darkness 🌑" },
-            { id: 4, name: "صوت: Wow! ✨" },
-            { id: 5, name: "عبارة: Let's Go! 🚀" },
-            { id: 6, name: "صوت: Oh Fuck! 💥" },
-            { id: 7, name: "صوت شهقة وانفعال 😲" },
-            { id: 8, name: "تنبيه: اكتشاف العدو! ⚠️" },
-            { id: 9, name: "صوت صراخ حاد 😱" },
-            { id: 10, name: "العد التنازلي والقتال 🥊" }
+            { id: 1, name: "صوت: Huh? 🤔", src: "universfield-confused-male-voice-huh-352694.mp3" },
+            { id: 2, name: "عبارة: Game Over 🎮", src: "universfield-game-over-deep-male-voice-clip-352695.mp3" },
+            { id: 3, name: "عبارة: Good Boy! 🐶", src: "universfield-good-boy-male-voice-praise-352699.mp3" },
+            { id: 4, name: "عبارة: You Stupid Cat! 🐱", src: "universfield-angry-male-voice-you-stupid-cat-352692.mp3" },
+            { id: 5, name: "عبارة: Darkness Hunts Us 🌑", src: "originalvo-medieval-gamer-voice-darkness-hunts-us-what-youx27ve-learned-stay-226596.mp3" },
+            { id: 6, name: "صوت: Wow! ✨", src: "universfield-male-wow-reaction-352683.mp3" },
+            { id: 7, name: "عبارة: Let's Go! 🚀", src: "universfield-male-voice-letx27s-go-352481.mp3" },
+            { id: 8, name: "عبارة: Oh Fuck! 💥", src: "freesound_community-084320_adult-male-says-quotoh-fuckquot-voice-over-actor-curse-slang-profanity-pain-anger-frustration-47363.mp3" },
+            { id: 9, name: "صوت: شهقة إندهام 😲", src: "freesound_community-male-gasp-1-7183.mp3" }
         ];
 
         let selectedSoundsForGame = [];
@@ -389,6 +388,7 @@
         let username = '';
         let currentRoom = null;
         let currentStageIndex = 0;
+        let currentAudioObject = null;
         window.myTotalScore = 0;
 
         window.onload = () => {
@@ -401,8 +401,7 @@
                     </div>`;
             });
             
-            // خلط كافة الأصوات عشوائياً واختيار 7 مراحل لكل جولة
-            selectedSoundsForGame = [...realSoundList].sort(() => 0.5 - Math.random()).slice(0, 7);
+            selectedSoundsForGame = [...realSoundList];
         };
 
         function selectAv(el, src) {
@@ -513,8 +512,16 @@
 
         function playTargetSound() {
             const currentSound = selectedSoundsForGame[currentStageIndex];
-            if (currentSound) {
-                console.log("جاري تشغيل الصوت للمرحلة:", currentSound.name);
+            if (currentSound && currentSound.src) {
+                if (currentAudioObject) {
+                    currentAudioObject.pause();
+                    currentAudioObject.currentTime = 0;
+                }
+                currentAudioObject = new Audio(currentSound.src);
+                currentAudioObject.play().catch(err => {
+                    console.error("خطأ تشغيل الصوت:", err);
+                    alert("تعذر تشغيل الصوت المحلي، تأكد من تواجد ملف الصوت بنفس المجلد.");
+                });
             }
         }
 
