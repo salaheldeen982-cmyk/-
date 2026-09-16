@@ -93,7 +93,7 @@
             color: white; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
             margin-top: 10px;
         }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; filter: grayscale(1); }
 
         .record-btn {
             background: #ef4444; color: white; border: none; border-radius: 50%; width: 75px; height: 75px;
@@ -148,10 +148,10 @@
             <div class="form-group">
                 <label>فئة الأصوات المراد تقليدها:</label>
                 <select id="sound-category">
-                    <option value="random">🔀 أصوات عشوائية مشكلة (7 مراحل)</option>
                     <option value="animals">🦁 أصوات حيوانات حقيقية (7 مراحل)</option>
-                    <option value="quotes">💬 عبارات ومقاطع مشهورة (7 مراحل)</option>
-                    <option value="memes">😂 أصوات وميمز التيك توك (7 مراحل)</option>
+                    <option value="memes">😂 أصوات وميمز حقيقية (7 مراحل)</option>
+                    <option value="quotes">💬 مقاطع مشهورة وحقيقية (7 مراحل)</option>
+                    <option value="random">🔀 أصوات عشوائية متنوعة (7 مراحل)</option>
                 </select>
             </div>
 
@@ -181,7 +181,7 @@
         <div id="screen-game" class="screen">
             <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
                 <div style="font-size: 1.1rem; font-weight: 700; color: var(--gold);" id="stage-indicator">المرحلة 1 / 7</div>
-                <h3 id="stage-title">استمع للصوت وقم بتقليده!</h3>
+                <h3 id="stage-title">استمع للصوت الحقيقي وقم بتقليده!</h3>
             </div>
             <div style="margin: 20px 0;">
                 <button class="btn-primary" style="margin-bottom: 15px;" onclick="playTargetSound()">
@@ -195,21 +195,21 @@
             </div>
 
             <div id="waiting-others-msg" style="display:none; color: var(--gold); font-weight: bold; margin-top: 15px;">
-                <i class="fa-solid fa-check-circle"></i> تم تسجيل صوتك بنجاح!
+                <i class="fa-solid fa-check-circle"></i> تم تسجيل صوتك بنجاح! بانتظار باقي اللاعبين...
             </div>
 
-            <!-- زر صاحب الغرفة لتفعيل شاشة الاستماع عند الانتهاء -->
-            <button class="btn-primary" id="btn-host-start-listening" style="display:none; background: #10b981;" onclick="hostTriggerListeningPhase()">
-                <i class="fa-solid fa-play"></i> بدء سماع الأصوات للجميع
+            <!-- زر صاحب الغرفة لتفعيل شاشة الاستماع عند انتهاء الجميع -->
+            <button class="btn-primary" id="btn-host-start-listening" style="display:none; background: #10b981;" onclick="hostTriggerListeningPhase()" disabled>
+                <i class="fa-solid fa-play"></i> بدء سماع الأصوات (بانتظار تسجيل الجميع...)
             </button>
-            <p id="txt-waiting-listening" style="color: var(--text-secondary); display:none; margin-top:10px;">في انتظار صاحب الغرفة لضغط زر سماع الأصوات...</p>
+            <p id="txt-waiting-listening" style="color: var(--text-secondary); display:none; margin-top:10px;">في انتظار صاحب الغرفة لضغط زر سماع الأصوات بعد أن ينتهي الجميع...</p>
         </div>
 
         <!-- Screen 5: Listening & Round-Robin Phase -->
         <div id="screen-listening" class="screen">
             <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
                 <h3 style="color: var(--accent-color);">🎧 الاستماع لتسجيلات اللاعبين</h3>
-                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">يتم تشغيل الأقسام بالتوالي بفارق ثانية واحدة بين كل صوت...</p>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">يتم تشغيل الأصوات بالتوالي بفارق ثانية واحدة بين كل صوت...</p>
             </div>
             
             <div class="playback-box">
@@ -324,7 +324,7 @@
                 const roomData = snapshot.val();
                 
                 if (!roomData) {
-                    alert("لقد أغلق المضيف الغرفة أو غادرها! سيتم إعادتك للقاعة الرئيسية.");
+                    alert("لقد أغلق المضيف الغرفة أو غادرها!");
                     window.location.reload();
                     return;
                 }
@@ -336,10 +336,24 @@
                     window.roomPlayersList = playersArr;
                     window.renderRoomPlayers(playersArr);
 
-                    // إظهار زر البدء بالسماع للمضيف عند توفر التسجيلات
+                    // التحقق من أن جميع اللاعبين سجلوا صوتهم للمرحلة الحالية
                     if (window.isHost && roomData.status === "playing" && roomData.stageState === "recording") {
                         const hostListeningBtn = document.getElementById('btn-host-start-listening');
-                        if (hostListeningBtn) hostListeningBtn.style.display = 'block';
+                        if (hostListeningBtn) {
+                            hostListeningBtn.style.display = 'block';
+                            
+                            const currentStage = roomData.currentStage || 0;
+                            const allPlayersSubmitted = playersArr.every(p => p.submittedStage === currentStage);
+
+                            if (allPlayersSubmitted) {
+                                hostListeningBtn.disabled = false;
+                                hostListeningBtn.innerHTML = `<i class="fa-solid fa-play"></i> بدء سماع الأصوات للجميع (اكتمل التسجيل!)`;
+                            } else {
+                                hostListeningBtn.disabled = true;
+                                const countSubmitted = playersArr.filter(p => p.submittedStage === currentStage).length;
+                                hostListeningBtn.innerHTML = `<i class="fa-solid fa-clock"></i> بانتظار التسجيل (${countSubmitted}/${playersArr.length})`;
+                            }
+                        }
                     }
                 }
 
@@ -357,55 +371,43 @@
     </script>
 
     <script>
-        // دالة توليد نغمة التجميع الصوتية الصريحة لمنع مشاكل المسارات الصوتية الخارجيّة
-        function generateToneBuffer(type = 'sine', freq = 440, duration = 1.5) {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const sampleRate = ctx.sampleRate;
-            const buffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < buffer.length; i++) {
-                const t = i / sampleRate;
-                data[i] = Math.sin(2 * Math.PI * freq * t) * Math.exp(-2 * t);
-            }
-            return buffer;
-        }
-
+        // قائمة الأصوات الحقيقية والمباشرة (ملفات MP3 حقيقية)
         const soundCategories = {
             animals: [
-                { id: 1, name: "زئير الأسد 🦁", speech: "غـاررررر زئير الأسد" },
-                { id: 2, name: "مواء القطة 🐱", speech: "مياووو مياووو" },
-                { id: 3, name: "صياح الديك 🐓", speech: "كوكوكوكوووو" },
-                { id: 4, name: "نباح الكلب 🐕", speech: "هوف هوف هوف" },
-                { id: 5, name: "نهيق الحمار 🫏", speech: "أووو إيـــر أووو إيـــر" },
-                { id: 6, name: "خوار البقرة 🐮", speech: "مـوووووووو" },
-                { id: 7, name: "عواء الذئب 🐺", speech: "أوووووووووو" }
-            ],
-            quotes: [
-                { id: 1, name: "يا حلاوة!", speech: "يا حلاوة" },
-                { id: 2, name: "أنا مش شايف غيرك!", speech: "أنا مش شايف غيرك" },
-                { id: 3, name: "وده معناه إيه؟", speech: "وده معناه إيه" },
-                { id: 4, name: "العملية تمت بنجاح!", speech: "العملية تمت بنجاح" },
-                { id: 5, name: "مين هناك؟", speech: "مين هناك" },
-                { id: 6, name: "يا فتاح يا عليم!", speech: "يا فتاح يا عليم" },
-                { id: 7, name: "أشوفك على خير!", speech: "أشوفك على خير" }
+                { id: 1, name: "زئير الأسد الحقيقي 🦁", url: "https://assets.mixkit.co/active_storage/sfx/2" },
+                { id: 2, name: "مواء القطة الحقيقي 🐱", url: "https://assets.mixkit.co/active_storage/sfx/11" },
+                { id: 3, name: "صياح الديك الحقيقي 🐓", url: "https://assets.mixkit.co/active_storage/sfx/10" },
+                { id: 4, name: "نباح الكلب الحقيقي 🐕", url: "https://assets.mixkit.co/active_storage/sfx/3" },
+                { id: 5, name: "نهيق الحمار الحقيقي 🫏", url: "https://assets.mixkit.co/active_storage/sfx/38" },
+                { id: 6, name: "خوار البقرة الحقيقي 🐮", url: "https://assets.mixkit.co/active_storage/sfx/13" },
+                { id: 7, name: "عواء الذئب الحقيقي 🐺", url: "https://assets.mixkit.co/active_storage/sfx/5" }
             ],
             memes: [
-                { id: 1, name: "ضحكة كرتونية 😂", speech: "هاهاهاهاهاهاها" },
-                { id: 2, name: "تصفيق وتحية 👏", speech: "برافو برافو برافو" },
-                { id: 3, name: "إيه ده يا راجل!", speech: "إيه ده يا راجل" },
-                { id: 4, name: "مش ممكن أبداً!", speech: "مش ممكن أبداً" },
-                { id: 5, name: "يا نهار أبيض!", speech: "يا نهار أبيض" },
-                { id: 6, name: "عظمة على عظمة!", speech: "عظمة على عظمة" },
-                { id: 7, name: "جامد جداً!", speech: "جامد جداً" }
+                { id: 1, name: "ضحكة ميمز مشهورة 😂", url: "https://assets.mixkit.co/active_storage/sfx/120" },
+                { id: 2, name: "صوت البوق المحرج (Bruh Sound) 🎺", url: "https://assets.mixkit.co/active_storage/sfx/860" },
+                { id: 3, name: "تصفيق وتحية حقيقية 👏", url: "https://assets.mixkit.co/active_storage/sfx/470" },
+                { id: 4, name: "صوت الخطأ الشهير ❌", url: "https://assets.mixkit.co/active_storage/sfx/2578" },
+                { id: 5, name: "صوت الفوز والإنجاز 🏆", url: "https://assets.mixkit.co/active_storage/sfx/1435" },
+                { id: 6, name: "صوت القفزة الكرتونية 🦘", url: "https://assets.mixkit.co/active_storage/sfx/1361" },
+                { id: 7, name: "صوت الصدمة والذهول 😱", url: "https://assets.mixkit.co/active_storage/sfx/2658" }
+            ],
+            quotes: [
+                { id: 1, name: "مقطع حقيقي: طائر مغرد 🐦", url: "https://assets.mixkit.co/active_storage/sfx/1" },
+                { id: 2, name: "مقطع حقيقي: جرس الإنذار 🔔", url: "https://assets.mixkit.co/active_storage/sfx/995" },
+                { id: 3, name: "مقطع حقيقي: صفارة حافة 🌬️", url: "https://assets.mixkit.co/active_storage/sfx/2568" },
+                { id: 4, name: "مقطع حقيقي: ضحكة الأطفال 👶", url: "https://assets.mixkit.co/active_storage/sfx/2210" },
+                { id: 5, name: "مقطع حقيقي: زئير الوحش 👾", url: "https://assets.mixkit.co/active_storage/sfx/8" },
+                { id: 6, name: "مقطع حقيقي: صفارة الحكم ⚽", url: "https://assets.mixkit.co/active_storage/sfx/2112" },
+                { id: 7, name: "مقطع حقيقي: قرع الأطباق 🍽️", url: "https://assets.mixkit.co/active_storage/sfx/1000" }
             ],
             random: [
-                { id: 1, name: "زئير الأسد 🦁", speech: "غـاررررر زئير الأسد" },
-                { id: 2, name: "يا حلاوة! 💬", speech: "يا حلاوة" },
-                { id: 3, name: "ضحكة كرتونية 😂", speech: "هاهاهاهاهاهاها" },
-                { id: 4, name: "تصفيق وتحية 👏", speech: "برافو برافو برافو" },
-                { id: 5, name: "صياح الديك 🐓", speech: "كوكوكوكوووو" },
-                { id: 6, name: "إيه ده يا راجل! 😂", speech: "إيه ده يا راجل" },
-                { id: 7, name: "مواء القطة 🐱", speech: "مياووو مياووو" }
+                { id: 1, name: "زئير الأسد 🦁", url: "https://assets.mixkit.co/active_storage/sfx/2" },
+                { id: 2, name: "ضحكة ميمز 😂", url: "https://assets.mixkit.co/active_storage/sfx/120" },
+                { id: 3, name: "مواء القطة 🐱", url: "https://assets.mixkit.co/active_storage/sfx/11" },
+                { id: 4, name: "صوت Bruh 🎺", url: "https://assets.mixkit.co/active_storage/sfx/860" },
+                { id: 5, name: "صياح الديك 🐓", url: "https://assets.mixkit.co/active_storage/sfx/10" },
+                { id: 6, name: "تصفيق وتحية 👏", url: "https://assets.mixkit.co/active_storage/sfx/470" },
+                { id: 7, name: "عواء الذئب 🐺", url: "https://assets.mixkit.co/active_storage/sfx/5" }
             ]
         };
 
@@ -550,16 +552,14 @@
             }
         }
 
+        // تشغيل صوت حقيقي ومسجل مسبقاً (MP3)
         function playTargetSound() {
             const list = soundCategories[window.currentRoomCategory] || soundCategories.animals;
             const stage = list[currentStageIndex];
 
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(stage.speech);
-                utterance.lang = 'ar-SA';
-                utterance.rate = 0.85;
-                window.speechSynthesis.speak(utterance);
+            if (stage && stage.url) {
+                const targetAudio = new Audio(stage.url + ".mp3");
+                targetAudio.play().catch(e => console.error("خطأ في تشغيل الصوت:", e));
             }
         }
 
@@ -609,12 +609,12 @@
             }
         }
 
-        // صاحب الغرفة يضغط زر بدء سماع الأصوات للجميع
+        // صاحب الغرفة يضغط زر بدء سماع الأصوات بعد اكتمال تسجيل الجميع
         function hostTriggerListeningPhase() {
             window.setStageStateInFirebase(currentRoom, "listening");
         }
 
-        // صاحب الغرفة يضغط للانتقال للمستوى التالي
+        // صاحب الغرفة يضغط للانتقال للمرحلة التالية
         function hostAdvanceNextStage() {
             if (currentStageIndex + 1 < 7) {
                 window.advanceRoomStage(currentRoom, currentStageIndex + 1);
@@ -623,7 +623,7 @@
             }
         }
 
-        // تشغيل التسجيلات بالتوالي مع فاصل ثانية واحدة دقيقة بين كل صوت وأخر
+        // تشغيل التسجيلات بالتوالي بفارق ثانية واحدة
         window.startRoundRobinPlayback = async function(playersList) {
             showScreen('screen-listening');
             
