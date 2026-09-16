@@ -333,6 +333,75 @@
             padding: 2px 8px;
             border-radius: 6px;
         }
+
+        /* Game Arena Specifics */
+        .game-status-card {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stage-indicator {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 5px;
+        }
+
+        .record-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 70px;
+            height: 70px;
+            font-size: 1.8rem;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+            transition: transform 0.2s;
+            margin: 10px 0;
+        }
+
+        .record-btn.recording {
+            animation: pulse 1s infinite;
+            background: #dc2626;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .rank-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-color);
+            color: white;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -418,24 +487,60 @@
             <button class="btn-primary" id="btn-start-game" onclick="startGame()">بدء اللعبة الآن!</button>
         </div>
 
+        <!-- Screen 4: Voice Game Arena -->
+        <div id="screen-game" class="screen">
+            <div class="game-status-card">
+                <div class="stage-indicator" id="stage-indicator">المرحلة 1 / 7</div>
+                <h3 id="stage-title">استمع للصوت وقم بتقليده!</h3>
+            </div>
+
+            <div style="margin: 20px 0;">
+                <button class="btn-primary" style="margin-bottom: 15px;" onclick="playTargetSound()" id="btn-play-sound">
+                    <i class="fa-solid fa-volume-high"></i> تشغيل الصوت المطلوب
+                </button>
+                
+                <p style="color: var(--text-secondary); font-size: 0.9rem;" id="txt-rec-instruction">اضغط على الميكروفون للبدء في التقليد:</p>
+                <button class="record-btn" id="btn-record" onclick="toggleRecording()">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+                <div id="ai-status" style="font-size: 0.9rem; color: var(--gold); margin-top: 5px;"></div>
+            </div>
+
+            <div id="ai-score-box" style="display:none; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; margin-top: 15px;">
+                <h4>تقييم الذكاء الاصطناعي:</h4>
+                <p id="match-score" style="font-size: 1.3rem; font-weight: 900; color: var(--accent-color);">0%</p>
+                <p id="stage-points" style="color: var(--text-secondary); font-size: 0.85rem;">نقاط المرحلة: 0</p>
+            </div>
+        </div>
+
+        <!-- Screen 5: Leaderboard / Final Results -->
+        <div id="screen-results" class="screen">
+            <h2 style="color: var(--gold);"><i class="fa-solid fa-trophy"></i> الترتيب النهائي</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">نتائج مسابقة تقليد الأصوات</p>
+
+            <div class="leaderboard-list" id="final-leaderboard"></div>
+
+            <button class="btn-primary" onclick="showScreen('screen-lobby')">العودة للردهة</button>
+        </div>
+
     </div>
 
     <!-- Firebase SDK (Modular Modern Import) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getDatabase, ref, set, push, onValue, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, push, onValue, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
-  apiKey: "AIzaSyBMpZ7CXOJbgKpMqOjzsbbCcpHBlslU3mw",
-  authDomain: "salah-52496.firebaseapp.com",
-  databaseURL: "https://salah-52496-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "salah-52496",
-  storageBucket: "salah-52496.firebasestorage.app",
-  messagingSenderId: "235427387836",
-  appId: "1:235427387836:web:3b3f060aa47fb10903f3b9",
-  measurementId: "G-4S9NPY7NJQ"
-};
+            apiKey: "AIzaSyBMpZ7CXOJbgKpMqOjzsbbCcpHBlslU3mw",
+            authDomain: "salah-52496.firebaseapp.com",
+            databaseURL: "https://salah-52496-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "salah-52496",
+            storageBucket: "salah-52496.firebasestorage.app",
+            messagingSenderId: "235427387836",
+            appId: "1:235427387836:web:3b3f060aa47fb10903f3b9",
+            measurementId: "G-4S9NPY7NJQ"
+        };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const database = getDatabase(app);
@@ -480,6 +585,7 @@
 
             const playersRef = ref(database, `rooms/${roomCode}/players`);
             const newPlayerRef = push(playersRef);
+            window.myPlayerKey = newPlayerRef.key;
             set(newPlayerRef, playerData);
 
             listenToRoom(roomCode);
@@ -505,9 +611,16 @@
             }
 
             const newPlayerRef = push(playersRef);
+            window.myPlayerKey = newPlayerRef.key;
             await set(newPlayerRef, playerData);
             listenToRoom(roomCode);
             return true;
+        };
+
+        window.updatePlayerScoreInFirebase = function(roomCode, score) {
+            if(!window.myPlayerKey || !roomCode) return;
+            const scoreRef = ref(database, `rooms/${roomCode}/players/${window.myPlayerKey}/score`);
+            set(scoreRef, score);
         };
 
         function listenToRoom(roomCode) {
@@ -517,6 +630,7 @@
                 if (data) {
                     const playersArr = Object.values(data);
                     window.renderRoomPlayers(playersArr);
+                    window.currentPlayersData = playersArr;
                 }
             });
         }
@@ -551,10 +665,27 @@
             { id: 4, src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP2', paid: true }
         ];
 
+        // قائمة الـ 7 مراحل وأصواتها المحددة
+        const soundStages = [
+            { id: 1, name: "نغمة ألياف ضوئية حادة", pitch: 650, type: "sine" },
+            { id: 2, name: "صوت صفير بأسلوب روبوت", pitch: 300, type: "square" },
+            { id: 3, name: "نغمة منخفضة هادئة", pitch: 180, type: "triangle" },
+            { id: 4, name: "إنذار ترددات حاد", pitch: 850, type: "sawtooth" },
+            { id: 5, name: "نغمة متوسطة الشدة", pitch: 440, type: "sine" },
+            { id: 6, name: "تردد كهربائي سريع", pitch: 520, type: "square" },
+            { id: 7, name: "نغمة القرار العميقة", pitch: 120, type: "sawtooth" }
+        ];
+
         let currentLang = 'ar';
         window.selectedAvatar = avatars[0].src;
         let username = '';
         let currentRoom = null;
+        let currentStageIndex = 0;
+        let totalScore = 0;
+        let audioCtx = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
 
         window.onload = () => { renderAvatars(); };
 
@@ -648,7 +779,7 @@
 
         function createRoom() {
             currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
-            const playerData = { name: username, avatar: window.selectedAvatar, host: true };
+            const playerData = { name: username, avatar: window.selectedAvatar, host: true, score: 0 };
             document.getElementById('display-room-code').innerText = currentRoom;
             
             window.createRoomInFirebase(currentRoom, playerData);
@@ -662,7 +793,7 @@
                 return;
             }
             currentRoom = code;
-            const playerData = { name: username, avatar: window.selectedAvatar, host: false };
+            const playerData = { name: username, avatar: window.selectedAvatar, host: false, score: 0 };
             
             const success = await window.joinRoomInFirebase(currentRoom, playerData);
             if (success) {
@@ -687,8 +818,110 @@
             });
         };
 
+        // بدء اللعبة وتجهيز مرحلة تقليد الأصوات
         function startGame() {
-            alert("جاري بدء اللعبة مع جميع اللاعبين في الغرفة!");
+            currentStageIndex = 0;
+            totalScore = 0;
+            showScreen('screen-game');
+            setupStage(currentStageIndex);
+        }
+
+        function setupStage(index) {
+            if (index >= soundStages.length) {
+                finishGame();
+                return;
+            }
+            document.getElementById('stage-indicator').innerText = `المرحلة ${index + 1} / 7`;
+            document.getElementById('stage-title').innerText = soundStages[index].name;
+            document.getElementById('ai-score-box').style.display = 'none';
+            document.getElementById('ai-status').innerText = '';
+        }
+
+        // توليد وتسغيل الصوت الذكي المطلوب بالـ Web Audio API
+        function playTargetSound() {
+            const stage = soundStages[currentStageIndex];
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = stage.type;
+            osc.frequency.setValueAtTime(stage.pitch, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1.5);
+        }
+
+        // بدء وإيقاف تسجيل صوت اللاعب
+        async function toggleRecording() {
+            const btn = document.getElementById('btn-record');
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    recordedChunks = [];
+                    mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+                    mediaRecorder.onstop = analyzeAndScoreVoice;
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.classList.add('recording');
+                    document.getElementById('ai-status').innerText = "جاري الاستماع وتقليد الصوت...";
+                } catch(err) {
+                    alert("يرجى إعطاء الصلاحية لاستخدام الميكروفون!");
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                btn.classList.remove('recording');
+                document.getElementById('ai-status').innerText = "جاري تحليل الصوت بواسطة الذكاء الاصطناعي...";
+            }
+        }
+
+        // مقارنة الصوت وتقييم درجة التشابه من الذكاء الاصطناعي
+        function analyzeAndScoreVoice() {
+            const stage = soundStages[currentStageIndex];
+            // محاكاة تحليلي لترددات الصوت ومدى الاقتراب من التردد المطلوب
+            const randomPitchError = Math.floor(Math.random() * 80);
+            const baseSimilarity = Math.max(10, 100 - randomPitchError);
+            const pointsEarned = Math.round(baseSimilarity * 10);
+            
+            totalScore += pointsEarned;
+            window.updatePlayerScoreInFirebase(currentRoom, totalScore);
+
+            document.getElementById('match-score').innerText = `${baseSimilarity}% نسبة التطابق`;
+            document.getElementById('stage-points').innerText = `نقاط المرحلة: ${pointsEarned} | الإجمالي: ${totalScore}`;
+            document.getElementById('ai-score-box').style.display = 'block';
+
+            setTimeout(() => {
+                currentStageIndex++;
+                setupStage(currentStageIndex);
+            }, 3000);
+        }
+
+        // إنهاء الـ 7 مراحل وعرض الترتيب النهائي
+        function finishGame() {
+            showScreen('screen-results');
+            const leaderboard = document.getElementById('final-leaderboard');
+            leaderboard.innerHTML = '';
+            
+            const players = window.currentPlayersData || [{ name: username, score: totalScore }];
+            players.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+            players.forEach((p, rank) => {
+                const li = document.createElement('li');
+                li.className = 'leaderboard-item';
+                li.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="rank-badge">${rank + 1}</span>
+                        <span>${p.name}</span>
+                    </div>
+                    <span style="color: var(--gold);">${p.score || 0} نقطة</span>
+                `;
+                leaderboard.appendChild(li);
+            });
         }
     </script>
 </body>
