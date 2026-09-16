@@ -435,8 +435,44 @@
             measurementId: "G-4SMPNYP7LQ"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
+       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, push } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// تهيئة Firebase
+const firebaseConfig = {
+  databaseURL: "https://salah-52496-default-rtdb.europe-west1.firebasedatabase.app"
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// إنشاء غرفة جديدة
+function createRoom(roomCode, hostName) {
+  const roomRef = ref(database, 'rooms/' + roomCode);
+  set(roomRef, {
+    host: hostName,
+    players: {
+      player1: hostName
+    },
+    status: "waiting"
+  });
+}
+
+// الانضمام لغرفة قائمة
+function joinRoom(roomCode, playerName) {
+  const playersRef = ref(database, `rooms/${roomCode}/players`);
+  const newPlayerRef = push(playersRef);
+  set(newPlayerRef, playerName);
+}
+
+// الاستماع للتحديثات اللحظية للغرفة
+function listenToRoom(roomCode, callback) {
+  const roomRef = ref(database, 'rooms/' + roomCode);
+  onValue(roomRef, (snapshot) => {
+    const data = snapshot.val();
+    callback(data);
+  });
+}
     </script>
 
     <script>
