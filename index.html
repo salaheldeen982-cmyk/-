@@ -361,7 +361,6 @@
         <div id="screen-login" class="screen active">
             <h2 id="txt-welcome" style="margin-bottom: 20px;">مرحباً بك في سرحان بارتي!</h2>
             
-            <!-- Social Login Options -->
             <div class="social-auth">
                 <button class="btn-social btn-google" onclick="socialLogin('Google')">
                     <i class="fa-brands fa-google"></i> <span id="txt-google">الدخول بواسطة Google</span>
@@ -373,7 +372,6 @@
 
             <div class="divider"><span id="txt-or">أو اللعب كضيف</span></div>
 
-            <!-- Profile Customization -->
             <div class="form-group">
                 <label id="lbl-name" for="username">اسم اللاعب</label>
                 <input type="text" id="username" placeholder="أدخل اسمك هنا...">
@@ -381,9 +379,7 @@
 
             <div class="avatar-section">
                 <label id="lbl-avatar">اختر شخصيتك</label>
-                <div class="avatar-grid" id="avatar-grid">
-                    <!-- Avatars via JS -->
-                </div>
+                <div class="avatar-grid" id="avatar-grid"></div>
                 <label class="upload-btn" for="file-upload" id="lbl-upload">
                     <i class="fa-solid fa-upload"></i> أو قم برفع صورتك الخاصّة
                 </label>
@@ -393,7 +389,7 @@
             <button class="btn-primary" onclick="goToLobby()" id="btn-next">متابعة للردهة</button>
         </div>
 
-        <!-- Screen 2: Room Choice (Create / Join) -->
+        <!-- Screen 2: Room Choice -->
         <div id="screen-lobby" class="screen">
             <h2 id="txt-lobby-title">صالة الانتظار</h2>
             <p style="color: var(--text-secondary); margin-bottom: 20px;" id="txt-lobby-desc">قم بإنشاء غرفة جديدة أو انضم إلى أصدقائك</p>
@@ -408,7 +404,7 @@
             <button class="btn-primary" style="background: transparent; border: 2px solid var(--accent-color);" onclick="joinRoom()" id="btn-join">الانضمام للغرفة</button>
         </div>
 
-        <!-- Screen 3: Game Room (Max 5 Players) -->
+        <!-- Screen 3: Game Room -->
         <div id="screen-room" class="screen">
             <div class="room-info">
                 <span id="txt-room-code">رقم الغرفة الخاصة بك:</span>
@@ -417,70 +413,54 @@
             </div>
 
             <h3 id="txt-players-in">اللاعبون المتواجدون (<span id="player-count">1</span>/5)</h3>
-            <div class="players-list" id="players-list">
-                <!-- Players rendered via JS -->
-            </div>
+            <div class="players-list" id="players-list"></div>
 
             <button class="btn-primary" id="btn-start-game" onclick="startGame()">بدء اللعبة الآن!</button>
         </div>
 
     </div>
 
-    <!-- Paywall Modal for Locked Avatars -->
+    <!-- Firebase Realtime App Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA2WWgfNCzg3LQ2Nqkp21IsbmbcQzlBDMw",
+            authDomain: "salah-52496.firebaseapp.com",
+            projectId: "salah-52496",
+            storageBucket: "salah-52496.firebasestorage.app",
+            messagingSenderId: "123427587326",
+            appId: "1:123427587326:web:3b3f86047fb30923f0f38b",
+            measurementId: "G-4SMPNYP7LQ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+    </script>
+
     <script>
-        // Language Dictionary
         const translations = {
             ar: {
-                title: "سرحان بارتي",
-                welcome: "مرحباً بك في سرحان بارتي!",
-                google: "الدخول بواسطة Google",
-                fb: "الدخول بواسطة الفيسبوك",
-                or: "أو اللعب كضيف",
-                lblName: "اسم اللاعب",
-                lblAvatar: "اختر شخصيتك",
-                lblUpload: "أو قم برفع صورتك الخاصّة",
-                btnNext: "متابعة للردهة",
-                lobbyTitle: "صالة الانتظار",
-                lobbyDesc: "قم بإنشاء غرفة جديدة أو انضم إلى أصدقائك",
-                btnCreate: "إنشاء غرفة جديدة",
-                orRoom: "أو",
-                btnJoin: "الانضمام للغرفة",
-                roomCode: "رقم الغرفة الخاصة بك:",
-                maxPlayers: "الحد الأقصى: 5 لاعبين في الغرفة",
-                playersIn: "اللاعبون المتواجدون",
-                btnStart: "بدء اللعبة الآن!",
-                alertName: "يرجى كتابة اسمك أولاً!",
-                alertRoom: "يرجى إدخال رقم الغرفة!",
-                alertFull: "عذراً! الغرفة ممتلئة (الحد الأقصى 5 لاعبين)",
+                title: "سرحان بارتي", welcome: "مرحباً بك في سرحان بارتي!", google: "الدخول بواسطة Google", fb: "الدخول بواسطة الفيسبوك",
+                or: "أو اللعب كضيف", lblName: "اسم اللاعب", lblAvatar: "اختر شخصيتك", lblUpload: "أو قم برفع صورتك الخاصّة",
+                btnNext: "متابعة للردهة", lobbyTitle: "صالة الانتظار", lobbyDesc: "قم بإنشاء غرفة جديدة أو انضم إلى أصدقائك",
+                btnCreate: "إنشاء غرفة جديدة", orRoom: "أو", btnJoin: "الانضمام للغرفة", roomCode: "رقم الغرفة الخاصة بك:",
+                maxPlayers: "الحد الأقصى: 5 لاعبين في الغرفة", playersIn: "اللاعبون المتواجدون", btnStart: "بدء اللعبة الآن!",
+                alertName: "يرجى كتابة اسمك أولاً!", alertRoom: "يرجى إدخال رقم الغرفة!", alertFull: "عذراً! الغرفة ممتلئة (الحد الأقصى 5 لاعبين)",
                 unlockPrompt: "هذه الشخصية مدفوعة/مقفولة! هل ترغب في فتحها مقابل 1.99$؟"
             },
             en: {
-                title: "Sarhan Party",
-                welcome: "Welcome to Sarhan Party!",
-                google: "Sign in with Google",
-                fb: "Sign in with Facebook",
-                or: "Or play as guest",
-                lblName: "Player Name",
-                lblAvatar: "Choose your avatar",
-                lblUpload: "Or upload your custom picture",
-                btnNext: "Continue to Lobby",
-                lobbyTitle: "Lobby",
-                lobbyDesc: "Create a new room or join your friends",
-                btnCreate: "Create New Room",
-                orRoom: "OR",
-                btnJoin: "Join Room",
-                roomCode: "Your Room Code:",
-                maxPlayers: "Max: 5 players per room",
-                playersIn: "Players Joined",
-                btnStart: "Start Game Now!",
-                alertName: "Please enter your name first!",
-                alertRoom: "Please enter a room code!",
-                alertFull: "Sorry! Room is full (Max 5 players)",
+                title: "Sarhan Party", welcome: "Welcome to Sarhan Party!", google: "Sign in with Google", fb: "Sign in with Facebook",
+                or: "Or play as guest", lblName: "Player Name", lblAvatar: "Choose your avatar", lblUpload: "Or upload your custom picture",
+                btnNext: "Continue to Lobby", lobbyTitle: "Lobby", lobbyDesc: "Create a new room or join your friends",
+                btnCreate: "Create New Room", orRoom: "OR", btnJoin: "Join Room", roomCode: "Your Room Code:",
+                maxPlayers: "Max: 5 players per room", playersIn: "Players Joined", btnStart: "Start Game Now!",
+                alertName: "Please enter your name first!", alertRoom: "Please enter a room code!", alertFull: "Sorry! Room is full (Max 5 players)",
                 unlockPrompt: "This character is premium! Would you like to unlock it for $1.99?"
             }
         };
 
-        // Avatars List
         const avatars = [
             { id: 1, src: 'https://api.dicebear.com/7.x/bottts/svg?seed=1', paid: false },
             { id: 2, src: 'https://api.dicebear.com/7.x/bottts/svg?seed=2', paid: false },
@@ -488,17 +468,14 @@
             { id: 4, src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP2', paid: true }
         ];
 
-        // State Variables
         let currentLang = 'ar';
         let selectedAvatar = avatars[0].src;
-        let roomPlayers = [];
+        let username = '';
+        let currentRoom = null;
+        let players = [];
 
-        // Initialize App
-        window.onload = () => {
-            renderAvatars();
-        };
+        window.onload = () => { renderAvatars(); };
 
-        // Toggle Theme
         function toggleTheme() {
             const html = document.documentElement;
             const icon = document.getElementById('theme-icon');
@@ -511,14 +488,12 @@
             }
         }
 
-        // Toggle Language
         function toggleLanguage() {
             currentLang = currentLang === 'ar' ? 'en' : 'ar';
             document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
             document.documentElement.lang = currentLang;
             document.getElementById('lang-label').innerText = currentLang === 'ar' ? 'EN' : 'عربي';
 
-            // Update UI Texts
             const t = translations[currentLang];
             document.getElementById('txt-title').innerText = t.title;
             document.getElementById('txt-welcome').innerText = t.welcome;
@@ -539,7 +514,6 @@
             document.getElementById('btn-start-game').innerText = t.btnStart;
         }
 
-        // Render Avatar Selection Grid
         function renderAvatars() {
             const grid = document.getElementById('avatar-grid');
             grid.innerHTML = '';
@@ -547,70 +521,54 @@
                 const item = document.createElement('div');
                 item.className = `avatar-item ${index === 0 ? 'selected' : ''} ${av.paid ? 'locked' : ''}`;
                 item.onclick = () => selectAvatar(av, item);
-                
-                item.innerHTML = `
-                    <img src="${av.src}" alt="avatar">
-                    ${av.paid ? '<span class="badge-vip">VIP</span>' : ''}
-                `;
+                item.innerHTML = `<img src="${av.src}" alt="avatar">${av.paid ? '<span class="badge-vip">VIP</span>' : ''}`;
                 grid.appendChild(item);
             });
         }
 
-        // Select Avatar logic
         function selectAvatar(av, element) {
             if (av.paid) {
                 if (confirm(translations[currentLang].unlockPrompt)) {
                     av.paid = false;
                     element.classList.remove('locked');
-                } else {
-                    return;
-                }
+                } else { return; }
             }
             document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
             element.classList.add('selected');
             selectedAvatar = av.src;
         }
 
-        // Handle File Upload for custom profile picture
         function handleImageUpload(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(evt) {
-                    selectedAvatar = evt.target.result;
-                    document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
-                    alert('تم رفع صورتك الشخصية بنجاح!');
+                reader.onload = (event) => {
+                    selectedAvatar = event.target.result;
+                    alert("تم رفع الصورة بنجاح!");
                 };
                 reader.readAsDataURL(file);
             }
         }
 
-        // Social Login Simulations
-        function socialLogin(provider) {
-            document.getElementById('username').value = provider + "_Player";
-            alert(`تم تسجيل الدخول بواسطة ${provider} بنجاح!`);
-        }
-
-        // Navigation & Screens
-        function showScreen(screenId) {
+        function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
+            document.getElementById(id).classList.add('active');
         }
 
         function goToLobby() {
-            const name = document.getElementById('username').value.trim();
-            if (!name) {
+            username = document.getElementById('username').value.trim();
+            if (!username) {
                 alert(translations[currentLang].alertName);
                 return;
             }
             showScreen('screen-lobby');
         }
 
-        // Room Creation and Joining
         function createRoom() {
-            const roomCode = Math.floor(1000 + Math.random() * 9000);
-            document.getElementById('display-room-code').innerText = roomCode;
-            setupRoom([getSelfPlayer()]);
+            currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
+            players = [{ name: username, avatar: selectedAvatar, host: true }];
+            updateRoomUI();
+            showScreen('screen-room');
         }
 
         function joinRoom() {
@@ -619,81 +577,39 @@
                 alert(translations[currentLang].alertRoom);
                 return;
             }
-            document.getElementById('display-room-code').innerText = code;
-            
-            // Simulating already present players in the room
-            const dummyPlayers = [
-                { name: 'أحمد', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=9' },
-                { name: 'سارة', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=12' }
+            currentRoom = code;
+            players = [
+                { name: username, avatar: selectedAvatar, host: false }
             ];
-
-            const currentRoomList = [getSelfPlayer(), ...dummyPlayers];
-
-            if (currentRoomList.length > 5) {
-                alert(translations[currentLang].alertFull);
-                return;
-            }
-
-            setupRoom(currentRoomList);
-        }
-
-        function getSelfPlayer() {
-            return {
-                name: document.getElementById('username').value,
-                avatar: selectedAvatar,
-                isHost: true
-            };
-        }
-
-        function setupRoom(players) {
-            roomPlayers = players;
-            renderRoomPlayers();
+            updateRoomUI();
             showScreen('screen-room');
         }
 
-        function renderRoomPlayers() {
+        function updateRoomUI() {
+            document.getElementById('display-room-code').innerText = currentRoom;
+            document.getElementById('player-count').innerText = players.length;
             const list = document.getElementById('players-list');
             list.innerHTML = '';
-            document.getElementById('player-count').innerText = roomPlayers.length;
-
-            roomPlayers.forEach(p => {
+            players.forEach(p => {
                 const card = document.createElement('div');
                 card.className = 'player-card';
                 card.innerHTML = `
-                    <img src="${p.avatar}" alt="player">
+                    <img src="${p.avatar}" alt="avatar">
                     <span class="player-name">${p.name}</span>
-                    ${p.isHost ? '<span class="player-badge">المضيف</span>' : ''}
+                    ${p.host ? '<span class="player-badge">المضيف</span>' : ''}
                 `;
                 list.appendChild(card);
             });
         }
 
         function startGame() {
-            alert('جاري بدء اللعبة مع جميع اللاعبين في الغرفة!');
+            alert("جاري بدء اللعبة مع جميع اللاعبين في الغرفة!");
+        }
+
+        function socialLogin(provider) {
+            document.getElementById('username').value = `لاعب_${provider}`;
+            alert(`تم تسجيل الدخول عبر ${provider}`);
         }
     </script>
-    <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyBMpZ7CXOJbgKpMqOjzsbbCcpHBlslU3mw",
-    authDomain: "salah-52496.firebaseapp.com",
-    projectId: "salah-52496",
-    storageBucket: "salah-52496.firebasestorage.app",
-    messagingSenderId: "235427387836",
-    appId: "1:235427387836:web:3b3f060aa47fb10903f3b9",
-    measurementId: "G-4S9NPY7NJQ"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
 </body>
 </html>
