@@ -177,18 +177,23 @@
             color: var(--text-secondary);
         }
 
-        input[type="text"] {
+        input[type="text"], select {
             width: 100%;
             padding: 12px 16px;
             border-radius: 12px;
             border: 1px solid var(--border-color);
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.2);
             color: var(--text-color);
             font-size: 1rem;
             outline: none;
         }
 
-        input[type="text"]:focus {
+        select option {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        input[type="text"]:focus, select:focus {
             border-color: var(--accent-color);
         }
 
@@ -334,6 +339,14 @@
             border-radius: 6px;
         }
 
+        .player-status-done {
+            font-size: 0.75rem;
+            background: #10b981;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
         /* Game Arena Specifics */
         .game-status-card {
             background: rgba(0, 0, 0, 0.25);
@@ -402,6 +415,18 @@
             color: white;
             font-size: 0.85rem;
         }
+
+        .spinner {
+            font-size: 2.5rem;
+            color: var(--accent-color);
+            animation: spin 1.5s linear infinite;
+            margin: 20px 0;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -458,10 +483,20 @@
             <button class="btn-primary" onclick="goToLobby()" id="btn-next">متابعة للردهة</button>
         </div>
 
-        <!-- Screen 2: Room Choice -->
+        <!-- Screen 2: Room Choice & Category Selection -->
         <div id="screen-lobby" class="screen">
             <h2 id="txt-lobby-title">صالة الانتظار</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 20px;" id="txt-lobby-desc">قم بإنشاء غرفة جديدة أو انضم إلى أصدقائك</p>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;" id="txt-lobby-desc">اختر نوع الأصوات ثم قم بإنشاء غرفة جديدة أو انضم لأصدقائك</p>
+
+            <div class="form-group">
+                <label id="lbl-category">فئة الأصوات المراد تقليدها:</label>
+                <select id="sound-category">
+                    <option value="animals"> أصوات حيوانات (أسد، قطة، إلخ)</option>
+                    <option value="quotes"> جمل ومقاطع مشهورة (مسلسلات وأفلام)</option>
+                    <option value="memes"> أصوات وميمز التيك توك والسوشيال ميديا</option>
+                    <option value="frequencies"> ترددات ونغمات صوتية (صعبة)</option>
+                </select>
+            </div>
 
             <button class="btn-primary" style="margin-bottom: 15px;" onclick="createRoom()" id="btn-create">إنشاء غرفة جديدة</button>
 
@@ -478,6 +513,7 @@
             <div class="room-info">
                 <span id="txt-room-code">رقم الغرفة الخاصة بك:</span>
                 <div class="room-code-display" id="display-room-code">----</div>
+                <div id="display-room-category" style="color: var(--gold); font-weight: bold; margin-top: 5px;"></div>
                 <small style="color: var(--text-secondary);" id="txt-max-players">الحد الأقصى: 5 لاعبين في الغرفة</small>
             </div>
 
@@ -513,6 +549,16 @@
             </div>
         </div>
 
+        <!-- Screen 4.5: Waiting Screen -->
+        <div id="screen-waiting" class="screen">
+            <i class="fa-solid fa-hourglass-half spinner"></i>
+            <h2>أحسنت! أنهيت مرحلتك.</h2>
+            <p style="color: var(--text-secondary); margin: 15px 0;" id="txt-waiting-msg">
+                يرجى الانتظار حتى ينتهي باقي اللاعبين في الغرفة لإعلان النتائج...
+            </p>
+            <div class="players-list" id="waiting-players-list"></div>
+        </div>
+
         <!-- Screen 5: Leaderboard / Final Results -->
         <div id="screen-results" class="screen">
             <h2 style="color: var(--gold);"><i class="fa-solid fa-trophy"></i> الترتيب النهائي</h2>
@@ -545,7 +591,6 @@
         const auth = getAuth(app);
         const database = getDatabase(app);
 
-        // جعل الدوال متاحة للمستند
         window.loginWithGoogle = async function() {
             const provider = new GoogleAuthProvider();
             try {
@@ -576,10 +621,11 @@
             }
         };
 
-        window.createRoomInFirebase = function(roomCode, playerData) {
+        window.createRoomInFirebase = function(roomCode, playerData, category) {
             const roomRef = ref(database, 'rooms/' + roomCode);
             set(roomRef, {
                 status: "waiting",
+                category: category,
                 createdAt: Date.now()
             });
 
@@ -600,6 +646,9 @@
                 return false;
             }
 
+            const roomData = snapshot.val();
+            window.currentRoomCategory = roomData.category || "animals";
+
             const playersRef = ref(database, `rooms/${roomCode}/players`);
             const playersSnap = await get(playersRef);
             if(playersSnap.exists()) {
@@ -617,20 +666,26 @@
             return true;
         };
 
-        window.updatePlayerScoreInFirebase = function(roomCode, score) {
+        window.updatePlayerStatusAndScore = function(roomCode, score, isDone) {
             if(!window.myPlayerKey || !roomCode) return;
-            const scoreRef = ref(database, `rooms/${roomCode}/players/${window.myPlayerKey}/score`);
-            set(scoreRef, score);
+            const playerRef = ref(database, `rooms/${roomCode}/players/${window.myPlayerKey}`);
+            update(playerRef, {
+                score: score,
+                isDone: isDone
+            });
         };
 
         function listenToRoom(roomCode) {
-            const playersRef = ref(database, `rooms/${roomCode}/players`);
-            onValue(playersRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const playersArr = Object.values(data);
-                    window.renderRoomPlayers(playersArr);
+            const roomRef = ref(database, `rooms/${roomCode}`);
+            onValue(roomRef, (snapshot) => {
+                const roomData = snapshot.val();
+                if (roomData && roomData.players) {
+                    const playersArr = Object.values(roomData.players);
                     window.currentPlayersData = playersArr;
+                    window.currentRoomCategory = roomData.category || "animals";
+                    
+                    window.renderRoomPlayers(playersArr);
+                    window.checkAllPlayersFinished(playersArr);
                 }
             });
         }
@@ -641,7 +696,7 @@
             ar: {
                 title: "سرحان بارتي", welcome: "مرحباً بك في سرحان بارتي!", google: "الدخول بواسطة Google", fb: "الدخول بواسطة الفيسبوك",
                 or: "أو اللعب كضيف", lblName: "اسم اللاعب", lblAvatar: "اختر شخصيتك", lblUpload: "أو قم برفع صورتك الخاصّة",
-                btnNext: "متابعة للردهة", lobbyTitle: "صالة الانتظار", lobbyDesc: "قم بإنشاء غرفة جديدة أو انضم إلى أصدقائك",
+                btnNext: "متابعة للردهة", lobbyTitle: "صالة الانتظار", lobbyDesc: "اختر نوع الأصوات ثم قم بإنشاء غرفة جديدة أو انضم لأصدقائك",
                 btnCreate: "إنشاء غرفة جديدة", orRoom: "أو", btnJoin: "الانضمام للغرفة", roomCode: "رقم الغرفة الخاصة بك:",
                 maxPlayers: "الحد الأقصى: 5 لاعبين في الغرفة", playersIn: "اللاعبون المتواجدون", btnStart: "بدء اللعبة الآن!",
                 alertName: "يرجى كتابة اسمك أولاً!", alertRoom: "يرجى إدخال رقم الغرفة!", alertFull: "عذراً! الغرفة ممتلئة (الحد الأقصى 5 لاعبين)",
@@ -650,7 +705,7 @@
             en: {
                 title: "Sarhan Party", welcome: "Welcome to Sarhan Party!", google: "Sign in with Google", fb: "Sign in with Facebook",
                 or: "Or play as guest", lblName: "Player Name", lblAvatar: "Choose your avatar", lblUpload: "Or upload your custom picture",
-                btnNext: "Continue to Lobby", lobbyTitle: "Lobby", lobbyDesc: "Create a new room or join your friends",
+                btnNext: "Continue to Lobby", lobbyTitle: "Lobby", lobbyDesc: "Choose voice category then create a room or join friends",
                 btnCreate: "Create New Room", orRoom: "OR", btnJoin: "Join Room", roomCode: "Your Room Code:",
                 maxPlayers: "Max: 5 players per room", playersIn: "Players Joined", btnStart: "Start Game Now!",
                 alertName: "Please enter your name first!", alertRoom: "Please enter a room code!", alertFull: "Sorry! Room is full (Max 5 players)",
@@ -665,16 +720,45 @@
             { id: 4, src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP2', paid: true }
         ];
 
-        // قائمة الـ 7 مراحل وأصواتها المحددة
-        const soundStages = [
-            { id: 1, name: "نغمة ألياف ضوئية حادة", pitch: 650, type: "sine" },
-            { id: 2, name: "صوت صفير بأسلوب روبوت", pitch: 300, type: "square" },
-            { id: 3, name: "نغمة منخفضة هادئة", pitch: 180, type: "triangle" },
-            { id: 4, name: "إنذار ترددات حاد", pitch: 850, type: "sawtooth" },
-            { id: 5, name: "نغمة متوسطة الشدة", pitch: 440, type: "sine" },
-            { id: 6, name: "تردد كهربائي سريع", pitch: 520, type: "square" },
-            { id: 7, name: "نغمة القرار العميقة", pitch: 120, type: "sawtooth" }
-        ];
+        // مكتبة الفئات المتنوعة للأصوات
+        const soundCategories = {
+            animals: [
+                { id: 1, name: "زئير الأسد", pitch: 120, type: "sawtooth", speech: "زئير أسد" },
+                { id: 2, name: "مواء القطة", pitch: 600, type: "sine", speech: "مواء قطة" },
+                { id: 3, name: "صياح الديك", pitch: 450, type: "square", speech: "صياح ديك" },
+                { id: 4, name: "نباح الكلب", pitch: 200, type: "sawtooth", speech: "نباح كلب" },
+                { id: 5, name: "نهيق الحمار", pitch: 350, type: "triangle", speech: "نهيق حمار" },
+                { id: 6, name: "خوار البقرة", pitch: 150, type: "sine", speech: "خوار بقرة" },
+                { id: 7, name: "صوت الذئب", pitch: 300, type: "sawtooth", speech: "عواء ذئب" }
+            ],
+            quotes: [
+                { id: 1, name: "يا حلاوة! (جملة سينمائية)", pitch: 400, speech: "يا حلاوة" },
+                { id: 2, name: "أنا مش شايف غيرك! (مسلسلات)", pitch: 320, speech: "أنا مش شايف غيرك" },
+                { id: 3, name: "وده معناه إيه؟ (حوار مشهور)", pitch: 280, speech: "وده معناه إيه" },
+                { id: 4, name: "العملية تمت بنجاح! (مشهد كلاسيكي)", pitch: 350, speech: "العملية تمت بنجاح" },
+                { id: 5, name: "مين هناك؟ (صوت درامي)", pitch: 220, speech: "مين هناك" },
+                { id: 6, name: "يا فتاح يا عليم (مشهد كوميدي)", pitch: 310, speech: "يا فتاح يا عليم" },
+                { id: 7, name: "عظيم جداً يا فنان! (عبارة مشهورة)", pitch: 260, speech: "عظيم جداً يا فنان" }
+            ],
+            memes: [
+                { id: 1, name: "ضحكة الميمز الشهيرة", pitch: 500, type: "square", speech: "ههههه هههه" },
+                { id: 2, name: "صوت الضحكة الشريرة", pitch: 180, type: "sawtooth", speech: "مواهاهاها" },
+                { id: 3, name: "إيه ده يا راجل! (تريند سوشيال)", pitch: 330, speech: "إيه ده يا راجل" },
+                { id: 4, name: "لا لا لا! (تريند تيك توك)", pitch: 420, speech: "لا لا لا" },
+                { id: 5, name: "يا نهار أبيض! (ميم مشهور)", pitch: 370, speech: "يا نهار أبيض" },
+                { id: 6, name: "استنى هنا! (صوت منتقط)", pitch: 290, speech: "استنى هنا" },
+                { id: 7, name: "برافو عليك! (مقطع صوتي متداول)", pitch: 380, speech: "برافو عليك" }
+            ],
+            frequencies: [
+                { id: 1, name: "نغمة ألياف ضوئية حادة", pitch: 650, type: "sine" },
+                { id: 2, name: "صوت صفير بأسلوب روبوت", pitch: 300, type: "square" },
+                { id: 3, name: "نغمة منخفضة هادئة", pitch: 180, type: "triangle" },
+                { id: 4, name: "إنذار ترددات حاد", pitch: 850, type: "sawtooth" },
+                { id: 5, name: "نغمة متوسطة الشدة", pitch: 440, type: "sine" },
+                { id: 6, name: "تردد كهربائي سريع", pitch: 520, type: "square" },
+                { id: 7, name: "نغمة القرار العميقة", pitch: 120, type: "sawtooth" }
+            ]
+        };
 
         let currentLang = 'ar';
         window.selectedAvatar = avatars[0].src;
@@ -686,6 +770,7 @@
         let isRecording = false;
         let mediaRecorder = null;
         let recordedChunks = [];
+        let hasFinishedMyTurn = false;
 
         window.onload = () => { renderAvatars(); };
 
@@ -779,10 +864,16 @@
 
         function createRoom() {
             currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
-            const playerData = { name: username, avatar: window.selectedAvatar, host: true, score: 0 };
+            const category = document.getElementById('sound-category').value;
+            window.currentRoomCategory = category;
+
+            const playerData = { name: username, avatar: window.selectedAvatar, host: true, score: 0, isDone: false };
             document.getElementById('display-room-code').innerText = currentRoom;
             
-            window.createRoomInFirebase(currentRoom, playerData);
+            const categoryNames = { animals: "حيوانات", quotes: "جمل مشهورة", memes: "أصوات وميمز", frequencies: "ترددات نغمية" };
+            document.getElementById('display-room-category').innerText = `الفئة المختارة: ${categoryNames[category]}`;
+
+            window.createRoomInFirebase(currentRoom, playerData, category);
             showScreen('screen-room');
         }
 
@@ -793,11 +884,13 @@
                 return;
             }
             currentRoom = code;
-            const playerData = { name: username, avatar: window.selectedAvatar, host: false, score: 0 };
+            const playerData = { name: username, avatar: window.selectedAvatar, host: false, score: 0, isDone: false };
             
             const success = await window.joinRoomInFirebase(currentRoom, playerData);
             if (success) {
                 document.getElementById('display-room-code').innerText = currentRoom;
+                const categoryNames = { animals: "حيوانات", quotes: "جمل مشهورة", memes: "أصوات وميمز", frequencies: "ترددات نغمية" };
+                document.getElementById('display-room-category').innerText = `الفئة المختارة: ${categoryNames[window.currentRoomCategory || 'animals']}`;
                 showScreen('screen-room');
             }
         }
@@ -805,7 +898,11 @@
         window.renderRoomPlayers = function(playersList) {
             document.getElementById('player-count').innerText = playersList.length;
             const list = document.getElementById('players-list');
-            list.innerHTML = '';
+            const waitingList = document.getElementById('waiting-players-list');
+            
+            if(list) list.innerHTML = '';
+            if(waitingList) waitingList.innerHTML = '';
+
             playersList.forEach(p => {
                 const card = document.createElement('div');
                 card.className = 'player-card';
@@ -813,8 +910,13 @@
                     <img src="${p.avatar}" alt="avatar">
                     <span class="player-name">${p.name}</span>
                     ${p.host ? '<span class="player-badge">المضيف</span>' : ''}
+                    ${p.isDone ? '<span class="player-status-done">جاهز</span>' : ''}
                 `;
-                list.appendChild(card);
+                if(list) list.appendChild(card);
+                if(waitingList) {
+                    const cloneCard = card.cloneNode(true);
+                    waitingList.appendChild(cloneCard);
+                }
             });
         };
 
@@ -822,37 +924,49 @@
         function startGame() {
             currentStageIndex = 0;
             totalScore = 0;
+            hasFinishedMyTurn = false;
             showScreen('screen-game');
             setupStage(currentStageIndex);
         }
 
         function setupStage(index) {
-            if (index >= soundStages.length) {
-                finishGame();
+            const currentList = soundCategories[window.currentRoomCategory] || soundCategories.animals;
+            if (index >= currentList.length) {
+                handleUserFinishedAllStages();
                 return;
             }
             document.getElementById('stage-indicator').innerText = `المرحلة ${index + 1} / 7`;
-            document.getElementById('stage-title').innerText = soundStages[index].name;
+            document.getElementById('stage-title').innerText = currentList[index].name;
             document.getElementById('ai-score-box').style.display = 'none';
             document.getElementById('ai-status').innerText = '';
         }
 
-        // توليد وتسغيل الصوت الذكي المطلوب بالـ Web Audio API
+        // تشغيل الصوت المطلوب (سواء نطق صوتي أو تردد نغمي)
         function playTargetSound() {
-            const stage = soundStages[currentStageIndex];
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const currentList = soundCategories[window.currentRoomCategory] || soundCategories.animals;
+            const stage = currentList[currentStageIndex];
+
+            if (stage.speech && 'speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(stage.speech);
+                utterance.lang = 'ar-SA';
+                utterance.pitch = 1.1;
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = stage.type || 'sine';
+                osc.frequency.setValueAtTime(stage.pitch || 440, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.5);
             }
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = stage.type;
-            osc.frequency.setValueAtTime(stage.pitch, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 1.5);
         }
 
         // بدء وإيقاف تسجيل صوت اللاعب
@@ -880,16 +994,14 @@
             }
         }
 
-        // مقارنة الصوت وتقييم درجة التشابه من الذكاء الاصطناعي
+        // مقارنة الصوت وتقييم درجة التشابه
         function analyzeAndScoreVoice() {
-            const stage = soundStages[currentStageIndex];
-            // محاكاة تحليلي لترددات الصوت ومدى الاقتراب من التردد المطلوب
             const randomPitchError = Math.floor(Math.random() * 80);
             const baseSimilarity = Math.max(10, 100 - randomPitchError);
             const pointsEarned = Math.round(baseSimilarity * 10);
             
             totalScore += pointsEarned;
-            window.updatePlayerScoreInFirebase(currentRoom, totalScore);
+            window.updatePlayerStatusAndScore(currentRoom, totalScore, false);
 
             document.getElementById('match-score').innerText = `${baseSimilarity}% نسبة التطابق`;
             document.getElementById('stage-points').innerText = `نقاط المرحلة: ${pointsEarned} | الإجمالي: ${totalScore}`;
@@ -898,19 +1010,35 @@
             setTimeout(() => {
                 currentStageIndex++;
                 setupStage(currentStageIndex);
-            }, 3000);
+            }, 2500);
         }
 
-        // إنهاء الـ 7 مراحل وعرض الترتيب النهائي
-        function finishGame() {
+        // عند إنهاء اللاعب لمراحله السبع
+        function handleUserFinishedAllStages() {
+            hasFinishedMyTurn = true;
+            window.updatePlayerStatusAndScore(currentRoom, totalScore, true);
+            showScreen('screen-waiting');
+        }
+
+        // التحقق مما إذا كان جميع اللاعبين قد أنهوا المراحل
+        window.checkAllPlayersFinished = function(players) {
+            if (!hasFinishedMyTurn) return;
+
+            const allDone = players.length > 0 && players.every(p => p.isDone === true);
+            if (allDone) {
+                finishGame(players);
+            }
+        };
+
+        // إنهاء الـ 7 مراحل للجميع وعرض الترتيب النهائي
+        function finishGame(players) {
             showScreen('screen-results');
             const leaderboard = document.getElementById('final-leaderboard');
             leaderboard.innerHTML = '';
             
-            const players = window.currentPlayersData || [{ name: username, score: totalScore }];
-            players.sort((a, b) => (b.score || 0) - (a.score || 0));
+            const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
 
-            players.forEach((p, rank) => {
+            sortedPlayers.forEach((p, rank) => {
                 const li = document.createElement('li');
                 li.className = 'leaderboard-item';
                 li.innerHTML = `
