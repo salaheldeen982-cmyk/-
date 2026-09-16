@@ -91,6 +91,7 @@
         .btn-primary {
             width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--gradient);
             color: white; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+            margin-top: 10px;
         }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
@@ -192,24 +193,37 @@
                 </button>
                 <div id="recording-timer" style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 10px;"></div>
             </div>
+
             <div id="waiting-others-msg" style="display:none; color: var(--gold); font-weight: bold; margin-top: 15px;">
-                <i class="fa-solid fa-spinner fa-spin"></i> تم التسجيل! في انتظار باقي اللاعبين لتنتهي تسجيلاتهم...
+                <i class="fa-solid fa-check-circle"></i> تم تسجيل صوتك بنجاح!
             </div>
+
+            <!-- زر صاحب الغرفة لتفعيل شاشة الاستماع عند الانتهاء -->
+            <button class="btn-primary" id="btn-host-start-listening" style="display:none; background: #10b981;" onclick="hostTriggerListeningPhase()">
+                <i class="fa-solid fa-play"></i> بدء سماع الأصوات للجميع
+            </button>
+            <p id="txt-waiting-listening" style="color: var(--text-secondary); display:none; margin-top:10px;">في انتظار صاحب الغرفة لضغط زر سماع الأصوات...</p>
         </div>
 
         <!-- Screen 5: Listening & Round-Robin Phase -->
         <div id="screen-listening" class="screen">
             <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
-                <h3 style="color: var(--accent-color);">🎧 الاستماع لتسجيلات جميع اللاعبين</h3>
-                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">يتم الآن تشغيل الأصوات بالترتيب تلقائياً وتقييمها عبر النظام...</p>
+                <h3 style="color: var(--accent-color);">🎧 الاستماع لتسجيلات اللاعبين</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">يتم تشغيل الأقسام بالتوالي بفارق ثانية واحدة بين كل صوت...</p>
             </div>
             
             <div class="playback-box">
                 <img id="current-speaker-avatar" src="" style="width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--accent-color); margin-bottom: 10px;">
                 <h4 id="current-speaker-name" style="font-size: 1.3rem;">اسم اللاعب</h4>
-                <div id="playback-status" style="margin: 15px 0; font-size: 1rem; color: var(--gold);">جاري تشغيل الصوت...</div>
+                <div id="playback-status" style="margin: 15px 0; font-size: 1rem; color: var(--gold);">في الانتظار...</div>
                 <div id="current-score-display" style="font-weight: bold; font-size: 1.1rem; color: #10b981;"></div>
             </div>
+
+            <!-- زر صاحب الغرفة للانتقال للمرحلة التالية بعد سماع كل الأصوات -->
+            <button class="btn-primary" id="btn-host-next-stage" style="display:none; background: var(--gradient);" onclick="hostAdvanceNextStage()">
+                الانتقال للمرحلة التالية ⏩
+            </button>
+            <p id="txt-waiting-next-stage" style="color: var(--gold); display:none; margin-top:10px;">في انتظار صاحب الغرفة للانتقال للمرحلة التالية...</p>
         </div>
 
         <!-- Screen 6: Final Results -->
@@ -252,6 +266,7 @@
                 status: "waiting", 
                 category: category, 
                 currentStage: 0,
+                stageState: "recording",
                 createdAt: Date.now(),
                 hostUid: uid
             });
@@ -280,7 +295,7 @@
         };
 
         window.triggerStartGameInFirebase = function(roomCode) {
-            update(ref(database, `rooms/${roomCode}`), { status: "playing", currentStage: 0 });
+            update(ref(database, `rooms/${roomCode}`), { status: "playing", currentStage: 0, stageState: "recording" });
         };
 
         window.submitStageAudio = function(roomCode, stageIndex, audioBase64, score) {
@@ -291,6 +306,10 @@
                 lastScore: score,
                 score: (window.myTotalScore || 0) + score
             });
+        };
+
+        window.setStageStateInFirebase = function(roomCode, state) {
+            update(ref(database, `rooms/${roomCode}`), { stageState: state });
         };
 
         window.advanceRoomStage = function(roomCode, nextStage) {
@@ -317,33 +336,49 @@
                     window.roomPlayersList = playersArr;
                     window.renderRoomPlayers(playersArr);
 
-                    if (roomData.status === "playing") {
-                        const currentStage = roomData.currentStage || 0;
-                        const allDoneRecording = playersArr.length >= 2 && playersArr.every(p => p.submittedStage === currentStage);
-                        
-                        if (allDoneRecording && !window.isPlayingRoundRobin) {
-                            window.startRoundRobinPlayback(playersArr, currentStage);
-                        }
+                    // إظهار زر البدء بالسماع للمضيف عند توفر التسجيلات
+                    if (window.isHost && roomData.status === "playing" && roomData.stageState === "recording") {
+                        const hostListeningBtn = document.getElementById('btn-host-start-listening');
+                        if (hostListeningBtn) hostListeningBtn.style.display = 'block';
                     }
                 }
 
-                if (roomData.status === "playing" && window.currentScreen !== "screen-game" && window.currentScreen !== "screen-listening" && window.currentScreen !== "screen-results") {
-                    window.startGameClient(roomData.currentStage || 0);
+                // التنقل التلقائي للمراحل وحالات الغرفة
+                if (roomData.status === "playing") {
+                    if (roomData.stageState === "listening" && window.currentScreen !== "screen-listening") {
+                        showScreen('screen-listening');
+                        window.startRoundRobinPlayback(window.roomPlayersList || []);
+                    } else if (roomData.stageState === "recording" && (window.currentStageIndex !== roomData.currentStage || window.currentScreen !== "screen-game")) {
+                        window.startGameClient(roomData.currentStage || 0);
+                    }
                 }
             });
         }
     </script>
 
     <script>
+        // دالة توليد نغمة التجميع الصوتية الصريحة لمنع مشاكل المسارات الصوتية الخارجيّة
+        function generateToneBuffer(type = 'sine', freq = 440, duration = 1.5) {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const sampleRate = ctx.sampleRate;
+            const buffer = ctx.createBuffer(1, sampleRate * duration, sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < buffer.length; i++) {
+                const t = i / sampleRate;
+                data[i] = Math.sin(2 * Math.PI * freq * t) * Math.exp(-2 * t);
+            }
+            return buffer;
+        }
+
         const soundCategories = {
             animals: [
-                { id: 1, name: "زئير الأسد 🦁", url: "https://actions.google.com/sounds/v1/animals/lion_roar.ogg" },
-                { id: 2, name: "مواء القطة 🐱", url: "https://actions.google.com/sounds/v1/animals/cat_purr_meow.ogg" },
-                { id: 3, name: "صياح الديك 🐓", url: "https://actions.google.com/sounds/v1/animals/rooster_crow.ogg" },
-                { id: 4, name: "نباح الكلب 🐕", url: "https://actions.google.com/sounds/v1/animals/dog_barking.ogg" },
-                { id: 5, name: "نهيق الحمار 🫏", speech: "أووو إيـــر" },
-                { id: 6, name: "خوار البقرة 🐮", url: "https://actions.google.com/sounds/v1/animals/cow_moo.ogg" },
-                { id: 7, name: "عواء الذئب 🐺", url: "https://actions.google.com/sounds/v1/animals/wolf_howl.ogg" }
+                { id: 1, name: "زئير الأسد 🦁", speech: "غـاررررر زئير الأسد" },
+                { id: 2, name: "مواء القطة 🐱", speech: "مياووو مياووو" },
+                { id: 3, name: "صياح الديك 🐓", speech: "كوكوكوكوووو" },
+                { id: 4, name: "نباح الكلب 🐕", speech: "هوف هوف هوف" },
+                { id: 5, name: "نهيق الحمار 🫏", speech: "أووو إيـــر أووو إيـــر" },
+                { id: 6, name: "خوار البقرة 🐮", speech: "مـوووووووو" },
+                { id: 7, name: "عواء الذئب 🐺", speech: "أوووووووووو" }
             ],
             quotes: [
                 { id: 1, name: "يا حلاوة!", speech: "يا حلاوة" },
@@ -355,8 +390,8 @@
                 { id: 7, name: "أشوفك على خير!", speech: "أشوفك على خير" }
             ],
             memes: [
-                { id: 1, name: "ضحكة كرتونية 😂", url: "https://actions.google.com/sounds/v1/human_voices/cartoon_laugh.ogg" },
-                { id: 2, name: "تصفيق وتحية 👏", url: "https://actions.google.com/sounds/v1/crowds/cheering_and_clapping.ogg" },
+                { id: 1, name: "ضحكة كرتونية 😂", speech: "هاهاهاهاهاهاها" },
+                { id: 2, name: "تصفيق وتحية 👏", speech: "برافو برافو برافو" },
                 { id: 3, name: "إيه ده يا راجل!", speech: "إيه ده يا راجل" },
                 { id: 4, name: "مش ممكن أبداً!", speech: "مش ممكن أبداً" },
                 { id: 5, name: "يا نهار أبيض!", speech: "يا نهار أبيض" },
@@ -364,13 +399,13 @@
                 { id: 7, name: "جامد جداً!", speech: "جامد جداً" }
             ],
             random: [
-                { id: 1, name: "زئير الأسد 🦁", url: "https://actions.google.com/sounds/v1/animals/lion_roar.ogg" },
+                { id: 1, name: "زئير الأسد 🦁", speech: "غـاررررر زئير الأسد" },
                 { id: 2, name: "يا حلاوة! 💬", speech: "يا حلاوة" },
-                { id: 3, name: "ضحكة كرتونية 😂", url: "https://actions.google.com/sounds/v1/human_voices/cartoon_laugh.ogg" },
-                { id: 4, name: "تصفيق وتحية 👏", url: "https://actions.google.com/sounds/v1/crowds/cheering_and_clapping.ogg" },
-                { id: 5, name: "صياح الديك 🐓", url: "https://actions.google.com/sounds/v1/animals/rooster_crow.ogg" },
+                { id: 3, name: "ضحكة كرتونية 😂", speech: "هاهاهاهاهاهاها" },
+                { id: 4, name: "تصفيق وتحية 👏", speech: "برافو برافو برافو" },
+                { id: 5, name: "صياح الديك 🐓", speech: "كوكوكوكوووو" },
                 { id: 6, name: "إيه ده يا راجل! 😂", speech: "إيه ده يا راجل" },
-                { id: 7, name: "مواء القطة 🐱", url: "https://actions.google.com/sounds/v1/animals/cat_purr_meow.ogg" }
+                { id: 7, name: "مواء القطة 🐱", speech: "مياووو مياووو" }
             ]
         };
 
@@ -393,9 +428,7 @@
         let username = '';
         let currentRoom = null;
         let currentStageIndex = 0;
-        let currentAudioPlayer = null;
         window.myTotalScore = 0;
-        window.isPlayingRoundRobin = false;
 
         window.onload = () => {
             const grid = document.getElementById('avatar-grid');
@@ -494,6 +527,7 @@
         }
 
         window.startGameClient = function(stageIdx = 0) {
+            window.currentStageIndex = stageIdx;
             currentStageIndex = stageIdx;
             showScreen('screen-game');
             setupStage(currentStageIndex);
@@ -510,28 +544,21 @@
             document.getElementById('btn-record').disabled = false;
             document.getElementById('waiting-others-msg').style.display = 'none';
             document.getElementById('recording-timer').innerText = '';
+
+            if(!window.isHost) {
+                document.getElementById('txt-waiting-listening').style.display = 'block';
+            }
         }
 
         function playTargetSound() {
             const list = soundCategories[window.currentRoomCategory] || soundCategories.animals;
             const stage = list[currentStageIndex];
 
-            if (currentAudioPlayer) {
-                currentAudioPlayer.pause();
-                currentAudioPlayer = null;
-            }
-
-            if (stage.url) {
-                currentAudioPlayer = new Audio(stage.url);
-                currentAudioPlayer.play().catch(e => console.log(e));
-                return;
-            }
-
-            if (stage.speech && 'speechSynthesis' in window) {
+            if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(stage.speech);
                 utterance.lang = 'ar-SA';
-                utterance.rate = 0.9;
+                utterance.rate = 0.85;
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -549,7 +576,7 @@
                     reader.readAsDataURL(blob);
                     reader.onloadend = () => {
                         const base64Audio = reader.result;
-                        const calculatedScore = Math.floor(60 + Math.random() * 38);
+                        const calculatedScore = Math.floor(65 + Math.random() * 33);
                         window.myTotalScore = (window.myTotalScore || 0) + calculatedScore;
                         
                         window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, calculatedScore);
@@ -582,33 +609,59 @@
             }
         }
 
-        window.startRoundRobinPlayback = async function(playersList, stageIndex) {
-            window.isPlayingRoundRobin = true;
+        // صاحب الغرفة يضغط زر بدء سماع الأصوات للجميع
+        function hostTriggerListeningPhase() {
+            window.setStageStateInFirebase(currentRoom, "listening");
+        }
+
+        // صاحب الغرفة يضغط للانتقال للمستوى التالي
+        function hostAdvanceNextStage() {
+            if (currentStageIndex + 1 < 7) {
+                window.advanceRoomStage(currentRoom, currentStageIndex + 1);
+            } else {
+                showResults(window.roomPlayersList || []);
+            }
+        }
+
+        // تشغيل التسجيلات بالتوالي مع فاصل ثانية واحدة دقيقة بين كل صوت وأخر
+        window.startRoundRobinPlayback = async function(playersList) {
             showScreen('screen-listening');
+            
+            const nextBtn = document.getElementById('btn-host-next-stage');
+            const waitTxt = document.getElementById('txt-waiting-next-stage');
+            if (nextBtn) nextBtn.style.display = 'none';
+            if (waitTxt) waitTxt.style.display = 'none';
 
             for (let i = 0; i < playersList.length; i++) {
                 const player = playersList[i];
                 document.getElementById('current-speaker-avatar').src = player.avatar;
                 document.getElementById('current-speaker-name').innerText = `صوت اللاعب: ${player.name}`;
-                document.getElementById('playback-status').innerText = "🔊 جاري تشغيل التسجيل (3 ثوانٍ)...";
+                document.getElementById('playback-status').innerText = "🔊 جاري تشغيل الصوت...";
                 document.getElementById('current-score-display').innerText = `تقييم التطابق: ${player.lastScore || 75}%`;
 
                 if (player.lastAudio) {
                     const audio = new Audio(player.lastAudio);
-                    await audio.play().catch(e => console.log(e));
+                    await new Promise((resolve) => {
+                        audio.onended = resolve;
+                        audio.onerror = resolve;
+                        audio.play().catch(resolve);
+                    });
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 3500));
+                // فاصل ثانية واحدة تماماً بين كل صوت والذي يليه
+                document.getElementById('playback-status').innerText = "⏳ انتهاء الصوت.. انتظار ثانية واحدة...";
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
-            window.isPlayingRoundRobin = false;
-
+            document.getElementById('playback-status').innerText = "✅ اكتملت جميع الأصوات للمرحلة الحالية!";
+            
+            // إظهار زر الانتقال للمرحلة التالية لصاحب الغرفة
             if (window.isHost) {
-                if (stageIndex + 1 < 7) {
-                    window.advanceRoomStage(currentRoom, stageIndex + 1);
-                } else {
-                    showResults(playersList);
-                }
+                if (nextBtn) nextBtn.style.display = 'block';
+            } else {
+                if (waitTxt) waitTxt.style.display = 'block';
             }
         };
 
