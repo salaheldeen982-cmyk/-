@@ -120,27 +120,22 @@
     </div>
 
     <div class="container">
-        <!-- Screen 1: Login & Avatar Selection -->
+        <!-- Screen 1: Login -->
         <div id="screen-login" class="screen active">
             <h2 style="margin-bottom: 20px;">مرحباً بك في اللعبة!</h2>
             <div class="form-group">
-                <label for="username">اسم اللاعب (15 حرف كحد أقصى)</label>
+                <label for="username">اسم اللاعب</label>
                 <input type="text" id="username" maxlength="15" placeholder="أدخل اسمك هنا...">
             </div>
             
             <div class="avatar-section">
-                <label>اختر شخصيتك أو ارفع صورتك الخاصة</label>
+                <label>اختر شخصيتك</label>
                 <div class="avatar-grid" id="avatar-grid"></div>
-                <div class="upload-box" onclick="document.getElementById('custom-avatar-input').click()">
-                    <i class="fa-solid fa-upload"></i>
-                    <span>رفع صورة شخصية مخصصة</span>
-                    <input type="file" id="custom-avatar-input" accept="image/*" style="display:none;" onchange="handleCustomAvatar(this)">
-                </div>
             </div>
             <button class="btn-primary" onclick="goToLobby()">متابعة للردهة</button>
         </div>
 
-        <!-- Screen 2: Room Selection -->
+        <!-- Screen 2: Lobby -->
         <div id="screen-lobby" class="screen">
             <h2>صالة الانتظار</h2>
             <p style="color: var(--text-secondary); margin-bottom: 20px;">أنشئ غرفة جديدة أو انضم لغرفة موجودة</p>
@@ -153,7 +148,7 @@
             <button class="btn-primary" style="background: transparent; border: 2px solid var(--accent-color);" onclick="joinRoom()">الانضمام للغرفة</button>
         </div>
 
-        <!-- Screen 3: Game Lobby Room -->
+        <!-- Screen 3: Game Room -->
         <div id="screen-room" class="screen">
             <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
                 <span>رقم الغرفة:</span>
@@ -163,12 +158,11 @@
             <div id="players-list" style="display: flex; flex-direction: column; gap: 10px; margin: 20px 0;"></div>
             
             <button class="btn-primary" id="btn-start-game" onclick="startGameHost()" disabled>
-                بدء اللعبة الآن (يلزم 2 لاعبين على الأقل)
+                بدء اللعبة الآن
             </button>
-            <p id="txt-waiting-host" style="color: var(--gold); display:none;">في انتظار المضيف لبدء اللعبة...</p>
         </div>
 
-        <!-- Screen 4: Voice Game Arena (Recording Phase) -->
+        <!-- Screen 4: Game Arena -->
         <div id="screen-game" class="screen">
             <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
                 <div style="font-size: 1.1rem; font-weight: 700; color: var(--gold);" id="stage-indicator">المرحلة 1 / 9</div>
@@ -186,459 +180,72 @@
             </div>
 
             <div id="waiting-others-msg" style="display:none; color: var(--gold); font-weight: bold; margin-top: 15px;">
-                <i class="fa-solid fa-check-circle"></i> تم تسجيل صوتك بنجاح! بانتظار باقي اللاعبين...
+                <i class="fa-solid fa-check-circle"></i> تم تسجيل صوتك بنجاح!
             </div>
-
-            <button class="btn-primary" id="btn-host-start-listening" style="display:none; background: #10b981;" onclick="hostTriggerListeningPhase()" disabled>
-                <i class="fa-solid fa-play"></i> بدء سماع الأصوات (بانتظار تسجيل الجميع...)
-            </button>
-            <p id="txt-waiting-listening" style="color: var(--text-secondary); display:none; margin-top:10px;">في انتظار صاحب الغرفة لضغط زر سماع الأصوات بعد أن ينتهي الجميع...</p>
-        </div>
-
-        <!-- Screen 5: Listening & Round-Robin Phase -->
-        <div id="screen-listening" class="screen">
-            <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
-                <h3 style="color: var(--accent-color);">🎧 الاستماع لتسجيلات اللاعبين</h3>
-                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">يتم تشغيل الأصوات بالتوالي بفارق ثانية واحدة بين كل صوت...</p>
-            </div>
-            
-            <div class="playback-box">
-                <img id="current-speaker-avatar" src="" style="width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--accent-color); margin-bottom: 10px;">
-                <h4 id="current-speaker-name" style="font-size: 1.3rem;">اسم اللاعب</h4>
-                <div id="playback-status" style="margin: 15px 0; font-size: 1rem; color: var(--gold);">في الانتظار...</div>
-                <div id="current-score-display" style="font-weight: bold; font-size: 1.1rem; color: #10b981;"></div>
-            </div>
-
-            <button class="btn-primary" id="btn-host-next-stage" style="display:none; background: var(--gradient);" onclick="hostAdvanceNextStage()">
-                الانتقال للمرحلة التالية ⏩
-            </button>
-            <p id="txt-waiting-next-stage" style="color: var(--gold); display:none; margin-top:10px;">في انتظار صاحب الغرفة للانتقال للمرحلة التالية...</p>
-        </div>
-
-        <!-- Screen 6: Final Results -->
-        <div id="screen-results" class="screen">
-            <h2 style="color: var(--gold);"><i class="fa-solid fa-trophy"></i> الترتيب النهائي</h2>
-            <div id="final-leaderboard" style="list-style: none; padding: 0; margin: 15px 0;"></div>
-            <button class="btn-primary" onclick="showScreen('screen-lobby')">العودة للردهة</button>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getDatabase, ref, set, update, onValue, get, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBMpZ7CXOJbgKpMqOjzsbbCcpHBlslU3mw",
-            authDomain: "salah-52496.firebaseapp.com",
-            databaseURL: "https://salah-52496-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "salah-52496",
-            storageBucket: "salah-52496.firebasestorage.app",
-            messagingSenderId: "235427387836",
-            appId: "1:235427387836:web:3b3f060aa47fb10903f3b9"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const database = getDatabase(app);
-
-        let userUID = null;
-        signInAnonymously(auth).then((res) => { userUID = res.user.uid; });
-
-        window.createRoomInFirebase = function(roomCode, playerData) {
-            const uid = userUID || "user_" + Math.random().toString(36).substr(2, 9);
-            window.myUID = uid;
-            window.isHost = true;
-            
-            const roomRef = ref(database, 'rooms/' + roomCode);
-            set(roomRef, { 
-                status: "waiting", 
-                currentStage: 0,
-                stageState: "recording",
-                createdAt: Date.now(),
-                hostUid: uid
-            });
-            
-            set(ref(database, `rooms/${roomCode}/players/${uid}`), playerData);
-            
-            onDisconnect(roomRef).remove();
-            listenToRoom(roomCode);
-        };
-
-        window.joinRoomInFirebase = async function(roomCode, playerData) {
-            const uid = userUID || "user_" + Math.random().toString(36).substr(2, 9);
-            window.myUID = uid;
-            window.isHost = false;
-
-            const snapshot = await get(ref(database, 'rooms/' + roomCode));
-            if (!snapshot.exists()) { alert("الغرفة غير موجودة!"); return false; }
-            
-            const pRef = ref(database, `rooms/${roomCode}/players/${uid}`);
-            await set(pRef, playerData);
-            onDisconnect(pRef).remove();
-
-            listenToRoom(roomCode);
-            return true;
-        };
-
-        window.triggerStartGameInFirebase = function(roomCode) {
-            update(ref(database, `rooms/${roomCode}`), { status: "playing", currentStage: 0, stageState: "recording" });
-        };
-
-        window.submitStageAudio = function(roomCode, stageIndex, audioBase64, score) {
-            if (!window.myUID || !roomCode) return;
-            update(ref(database, `rooms/${roomCode}/players/${window.myUID}`), { 
-                submittedStage: stageIndex,
-                lastAudio: audioBase64,
-                lastScore: score,
-                score: (window.myTotalScore || 0) + score
-            });
-        };
-
-        window.setStageStateInFirebase = function(roomCode, state) {
-            update(ref(database, `rooms/${roomCode}`), { stageState: state });
-        };
-
-        window.advanceRoomStage = function(roomCode, nextStage) {
-            update(ref(database, `rooms/${roomCode}`), { 
-                currentStage: nextStage,
-                stageState: "recording"
-            });
-        };
-
-        function listenToRoom(roomCode) {
-            onValue(ref(database, `rooms/${roomCode}`), (snapshot) => {
-                const roomData = snapshot.val();
-                
-                if (!roomData) {
-                    alert("لقد أغلق المضيف الغرفة أو غادرها!");
-                    window.location.reload();
-                    return;
-                }
-
-                if (roomData.players) {
-                    const playersArr = Object.values(roomData.players);
-                    window.roomPlayersList = playersArr;
-                    window.renderRoomPlayers(playersArr);
-
-                    if (window.isHost && roomData.status === "playing" && roomData.stageState === "recording") {
-                        const hostListeningBtn = document.getElementById('btn-host-start-listening');
-                        if (hostListeningBtn) {
-                            hostListeningBtn.style.display = 'block';
-                            
-                            const currentStage = roomData.currentStage || 0;
-                            const allPlayersSubmitted = playersArr.every(p => p.submittedStage === currentStage);
-
-                            if (allPlayersSubmitted) {
-                                hostListeningBtn.disabled = false;
-                                hostListeningBtn.innerHTML = `<i class="fa-solid fa-play"></i> بدء سماع الأصوات للجميع (اكتمل التسجيل!)`;
-                            } else {
-                                hostListeningBtn.disabled = true;
-                                const countSubmitted = playersArr.filter(p => p.submittedStage === currentStage).length;
-                                hostListeningBtn.innerHTML = `<i class="fa-solid fa-clock"></i> بانتظار التسجيل (${countSubmitted}/${playersArr.length})`;
-                            }
-                        }
-                    }
-                }
-
-                if (roomData.status === "playing") {
-                    if (roomData.stageState === "listening" && window.currentScreen !== "screen-listening") {
-                        showScreen('screen-listening');
-                        window.startRoundRobinPlayback(window.roomPlayersList || []);
-                    } else if (roomData.stageState === "recording" && (window.currentStageIndex !== roomData.currentStage || window.currentScreen !== "screen-game")) {
-                        window.startGameClient(roomData.currentStage || 0);
-                    }
-                }
-            });
-        }
-    </script>
-
     <script>
-        // الملفات الصوتية التسعة المرسلة فقط بدون أي إضافة خارجية
+        // الأصوات التسعة المرفوعة في المستودع بنفس الأسماء
         const realSoundList = [
-            { id: 1, name: "صوت: Huh? 🤔", src: "universfield-confused-male-voice-huh-352694.mp3" },
-            { id: 2, name: "عبارة: Game Over 🎮", src: "universfield-game-over-deep-male-voice-clip-352695.mp3" },
-            { id: 3, name: "عبارة: Good Boy! 🐶", src: "universfield-good-boy-male-voice-praise-352699.mp3" },
-            { id: 4, name: "عبارة: You Stupid Cat! 🐱", src: "universfield-angry-male-voice-you-stupid-cat-352692.mp3" },
-            { id: 5, name: "عبارة: Darkness Hunts Us 🌑", src: "originalvo-medieval-gamer-voice-darkness-hunts-us-what-youx27ve-learned-stay-226596.mp3" },
-            { id: 6, name: "صوت: Wow! ✨", src: "universfield-male-wow-reaction-352683.mp3" },
-            { id: 7, name: "عبارة: Let's Go! 🚀", src: "universfield-male-voice-letx27s-go-352481.mp3" },
-            { id: 8, name: "عبارة: Oh Fuck! 💥", src: "freesound_community-084320_adult-male-says-quotoh-fuckquot-voice-over-actor-curse-slang-profanity-pain-anger-frustration-47363.mp3" },
-            { id: 9, name: "صوت: شهقة إندهام 😲", src: "freesound_community-male-gasp-1-7183.mp3" }
+            { id: 1, name: "صوت: Huh? 🤔", src: "./universfield-confused-male-voice-huh-352694.mp3" },
+            { id: 2, name: "عبارة: Game Over 🎮", src: "./universfield-game-over-deep-male-voice-clip-352695.mp3" },
+            { id: 3, name: "عبارة: Good Boy! 🐶", src: "./universfield-good-boy-male-voice-praise-352699.mp3" },
+            { id: 4, name: "عبارة: You Stupid Cat! 🐱", src: "./universfield-angry-male-voice-you-stupid-cat-352692.mp3" },
+            { id: 5, name: "عبارة: Darkness Hunts Us 🌑", src: "./originalvo-medieval-gamer-voice-darkness-hunts-us-what-youx27ve-learned-stay-226596.mp3" },
+            { id: 6, name: "صوت: Wow! ✨", src: "./universfield-male-wow-reaction-352683.mp3" },
+            { id: 7, name: "عبارة: Let's Go! 🚀", src: "./universfield-male-voice-letx27s-go-352481.mp3" },
+            { id: 8, name: "عبارة: Oh Fuck! 💥", src: "./freesound_community-084320_adult-male-says-quotoh-fuckquot-voice-over-actor-curse-slang-profanity-pain-anger-frustration-47363.mp3" },
+            { id: 9, name: "صوت: شهقة إندهام 😲", src: "./freesound_community-male-gasp-1-7183.mp3" }
         ];
 
-        let selectedSoundsForGame = [];
-
-        const defaultAvatars = [
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=1', isVip: false },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=2', isVip: false },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=3', isVip: false },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=4', isVip: false },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=5', isVip: false },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=6', isVip: false },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=7', isVip: false },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=8', isVip: false },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP1', isVip: true },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP2', isVip: true },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP3', isVip: true },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP4', isVip: true }
-        ];
-
-        let selectedAvatar = defaultAvatars[0].src;
-        let username = '';
-        let currentRoom = null;
         let currentStageIndex = 0;
         let currentAudioObject = null;
-        window.myTotalScore = 0;
-
-        window.onload = () => {
-            const grid = document.getElementById('avatar-grid');
-            defaultAvatars.forEach((item, idx) => {
-                grid.innerHTML += `
-                    <div class="avatar-item ${idx===0?'selected':''}" onclick="selectAv(this, '${item.src}')">
-                        ${item.isVip ? '<span class="vip-badge">VIP</span>' : ''}
-                        <img src="${item.src}">
-                    </div>`;
-            });
-            
-            selectedSoundsForGame = [...realSoundList];
-        };
-
-        function selectAv(el, src) {
-            document.querySelectorAll('.avatar-item').forEach(e => e.classList.remove('selected'));
-            el.classList.add('selected');
-            selectedAvatar = src;
-        }
-
-        function handleCustomAvatar(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    selectedAvatar = e.target.result;
-                    alert("تم تحميل صورتك بنجاح!");
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
 
         function showScreen(id) {
-            window.currentScreen = id;
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
         function goToLobby() {
-            username = document.getElementById('username').value.trim();
+            const username = document.getElementById('username').value.trim();
             if(!username) return alert("يرجى إدخال اسمك!");
-            if(username.length > 15) return alert("يجب ألا يتجاوز اسم اللاعب 15 حرفاً!");
             showScreen('screen-lobby');
         }
 
         function createRoom() {
-            currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
-
-            document.getElementById('display-room-code').innerText = currentRoom;
-            document.getElementById('btn-start-game').style.display = 'block';
-            document.getElementById('txt-waiting-host').style.display = 'none';
-
-            window.createRoomInFirebase(currentRoom, { name: username, avatar: selectedAvatar, host: true, score: 0, submittedStage: -1 });
+            document.getElementById('display-room-code').innerText = Math.floor(1000 + Math.random() * 9000);
             showScreen('screen-room');
         }
 
-        async function joinRoom() {
-            const code = document.getElementById('room-code-input').value.trim();
-            if(!code) return alert("أدخل رقم الغرفة!");
-            currentRoom = code;
-
-            document.getElementById('btn-start-game').style.display = 'none';
-            document.getElementById('txt-waiting-host').style.display = 'block';
-
-            const success = await window.joinRoomInFirebase(currentRoom, { name: username, avatar: selectedAvatar, host: false, score: 0, submittedStage: -1 });
-            if(success) {
-                document.getElementById('display-room-code').innerText = currentRoom;
-                showScreen('screen-room');
-            }
+        function joinRoom() {
+            showScreen('screen-room');
         }
-
-        window.renderRoomPlayers = function(playersList) {
-            document.getElementById('player-count').innerText = playersList.length;
-            const list = document.getElementById('players-list');
-            list.innerHTML = '';
-            playersList.forEach(p => {
-                list.innerHTML += `
-                    <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.05); padding:10px; border-radius:12px;">
-                        <img src="${p.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
-                        <span style="font-weight:700; flex:1; text-align:right;">${p.name}</span>
-                        ${p.host ? '<span style="font-size:0.75rem; background:var(--accent-color); padding:2px 8px; border-radius:6px;">المضيف</span>' : ''}
-                    </div>`;
-            });
-
-            const startBtn = document.getElementById('btn-start-game');
-            if (playersList.length >= 2) {
-                startBtn.disabled = false;
-                startBtn.innerText = "بدء اللعبة الآن!";
-            } else {
-                startBtn.disabled = true;
-                startBtn.innerText = "يلزم 2 لاعبين على الأقل للبدء...";
-            }
-        };
 
         function startGameHost() {
-            window.triggerStartGameInFirebase(currentRoom);
+            showScreen('screen-game');
+            setupStage(0);
         }
 
-        window.startGameClient = function(stageIdx = 0) {
-            window.currentStageIndex = stageIdx;
-            currentStageIndex = stageIdx;
-            showScreen('screen-game');
-            setupStage(currentStageIndex);
-        };
-
         function setupStage(index) {
-            if(index >= selectedSoundsForGame.length) {
-                showResults(window.roomPlayersList || []);
-                return;
-            }
-            document.getElementById('stage-indicator').innerText = `المرحلة ${index + 1} / ${selectedSoundsForGame.length}`;
-            document.getElementById('stage-title').innerText = selectedSoundsForGame[index].name;
-            document.getElementById('btn-record').disabled = false;
-            document.getElementById('waiting-others-msg').style.display = 'none';
-            document.getElementById('recording-timer').innerText = '';
-
-            if(!window.isHost) {
-                document.getElementById('txt-waiting-listening').style.display = 'block';
-            }
+            currentStageIndex = index;
+            document.getElementById('stage-indicator').innerText = `المرحلة ${index + 1} / ${realSoundList.length}`;
+            document.getElementById('stage-title').innerText = realSoundList[index].name;
         }
 
         function playTargetSound() {
-            const currentSound = selectedSoundsForGame[currentStageIndex];
+            const currentSound = realSoundList[currentStageIndex];
             if (currentSound && currentSound.src) {
                 if (currentAudioObject) {
                     currentAudioObject.pause();
-                    currentAudioObject.currentTime = 0;
                 }
                 currentAudioObject = new Audio(currentSound.src);
+                
                 currentAudioObject.play().catch(err => {
                     console.error("خطأ تشغيل الصوت:", err);
-                    alert("تعذر تشغيل الصوت المحلي، تأكد من تواجد ملف الصوت بنفس المجلد.");
+                    alert("تأكد من إدراج ملفات الصوت بنفس اسم الملف في المستودع على GitHub Pages.");
                 });
             }
-        }
-
-        async function startRecording3s() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const mediaRecorder = new MediaRecorder(stream);
-                const chunks = [];
-
-                mediaRecorder.ondataavailable = e => chunks.push(e.data);
-                mediaRecorder.onstop = async () => {
-                    const blob = new Blob(chunks, { type: 'audio/webm' });
-                    const reader = new FileReader();
-                    reader.readAsDataURL(blob);
-                    reader.onloadend = () => {
-                        const base64Audio = reader.result;
-                        const calculatedScore = Math.floor(65 + Math.random() * 33);
-                        window.myTotalScore = (window.myTotalScore || 0) + calculatedScore;
-                        
-                        window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, calculatedScore);
-                        
-                        document.getElementById('btn-record').disabled = true;
-                        document.getElementById('waiting-others-msg').style.display = 'block';
-                    };
-                };
-
-                mediaRecorder.start();
-                document.getElementById('btn-record').classList.add('recording');
-                let timeLeft = 3;
-                document.getElementById('recording-timer').innerText = `متبقي: ${timeLeft} ثانية`;
-
-                const timerInterval = setInterval(() => {
-                    timeLeft--;
-                    if (timeLeft > 0) {
-                        document.getElementById('recording-timer').innerText = `متبقي: ${timeLeft} ثانية`;
-                    } else {
-                        clearInterval(timerInterval);
-                        document.getElementById('recording-timer').innerText = `تم التسجيل!`;
-                        document.getElementById('btn-record').classList.remove('recording');
-                        mediaRecorder.stop();
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-                }, 1000);
-
-            } catch(err) {
-                alert("يرجى إعطاء صلاحية الميكروفون للعب!");
-            }
-        }
-
-        function hostTriggerListeningPhase() {
-            window.setStageStateInFirebase(currentRoom, "listening");
-        }
-
-        function hostAdvanceNextStage() {
-            if (currentStageIndex + 1 < selectedSoundsForGame.length) {
-                window.advanceRoomStage(currentRoom, currentStageIndex + 1);
-            } else {
-                showResults(window.roomPlayersList || []);
-            }
-        }
-
-        window.startRoundRobinPlayback = async function(playersList) {
-            showScreen('screen-listening');
-            
-            const nextBtn = document.getElementById('btn-host-next-stage');
-            const waitTxt = document.getElementById('txt-waiting-next-stage');
-            if (nextBtn) nextBtn.style.display = 'none';
-            if (waitTxt) waitTxt.style.display = 'none';
-
-            for (let i = 0; i < playersList.length; i++) {
-                const player = playersList[i];
-                document.getElementById('current-speaker-avatar').src = player.avatar;
-                document.getElementById('current-speaker-name').innerText = `صوت اللاعب: ${player.name}`;
-                document.getElementById('playback-status').innerText = "🔊 جاري تشغيل الصوت...";
-                document.getElementById('current-score-display').innerText = `تقييم التطابق: ${player.lastScore || 75}%`;
-
-                if (player.lastAudio) {
-                    const audio = new Audio(player.lastAudio);
-                    await new Promise((resolve) => {
-                        audio.onended = resolve;
-                        audio.onerror = resolve;
-                        audio.play().catch(resolve);
-                    });
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                }
-
-                document.getElementById('playback-status').innerText = "⏳ انتهاء الصوت.. انتظار ثانية واحدة...";
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-
-            document.getElementById('playback-status').innerText = "✅ اكتملت جميع الأصوات للمرحلة الحالية!";
-            
-            if (window.isHost) {
-                if (nextBtn) nextBtn.style.display = 'block';
-            } else {
-                if (waitTxt) waitTxt.style.display = 'block';
-            }
-        };
-
-        function showResults(players) {
-            showScreen('screen-results');
-            const board = document.getElementById('final-leaderboard');
-            board.innerHTML = '';
-            const sorted = [...players].sort((a,b) => (b.score || 0) - (a.score || 0));
-            
-            sorted.forEach((p, idx) => {
-                board.innerHTML += `
-                    <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.05); padding:12px 15px; border-radius:12px; margin-bottom:10px; font-weight:700;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span style="font-size:1.2rem; color:var(--gold);">#${idx+1}</span>
-                            <img src="${p.avatar}" style="width:35px; height:35px; border-radius:50%;">
-                            <span>${p.name}</span>
-                        </div>
-                        <span style="color:var(--accent-color);">${p.score || 0} نقطة</span>
-                    </div>`;
-            });
         }
 
         function toggleTheme() {
