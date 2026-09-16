@@ -12,7 +12,6 @@
             --bg-color: #0f172a;
             --card-bg: rgba(30, 41, 59, 0.75);
             --accent-color: #8b5cf6;
-            --accent-hover: #7c3aed;
             --text-color: #f8fafc;
             --text-secondary: #94a3b8;
             --border-color: rgba(255, 255, 255, 0.1);
@@ -24,13 +23,12 @@
             --bg-color: #f1f5f9;
             --card-bg: rgba(255, 255, 255, 0.85);
             --accent-color: #6366f1;
-            --accent-hover: #4f46e5;
             --text-color: #0f172a;
             --text-secondary: #64748b;
             --border-color: rgba(0, 0, 0, 0.1);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; transition: all 0.3s ease; }
 
         body {
             background-color: var(--bg-color);
@@ -40,15 +38,13 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background-image: radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 20%),
-                              radial-gradient(circle at 90% 80%, rgba(99, 102, 241, 0.15) 0%, transparent 20%);
             overflow-x: hidden;
         }
 
         .top-bar { position: fixed; top: 20px; right: 20px; left: 20px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
-        .logo { font-size: 1.8rem; font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 10px; }
+        .logo { font-size: 1.8rem; font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .settings-btns { display: flex; gap: 10px; }
-        .icon-btn { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); padding: 10px 15px; border-radius: 12px; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 8px; font-weight: 600; }
+        .icon-btn { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); padding: 10px 15px; border-radius: 12px; cursor: pointer; font-weight: 600; }
 
         .container {
             background: var(--card-bg);
@@ -58,7 +54,6 @@
             padding: 30px;
             width: 90%;
             max-width: 520px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
             text-align: center;
             margin: 80px 0 20px;
         }
@@ -69,6 +64,8 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .form-group { margin-bottom: 20px; text-align: right; }
+        [dir="ltr"] .form-group { text-align: left; }
+        
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-secondary); }
 
         input[type="text"] {
@@ -76,90 +73,78 @@
             background: rgba(0, 0, 0, 0.2); color: var(--text-color); font-size: 1rem; outline: none;
         }
 
-        .avatar-section { margin: 20px 0; }
-        .avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; max-height: 220px; overflow-y: auto; padding: 5px; }
-        .avatar-item { position: relative; border-radius: 16px; border: 2px solid transparent; cursor: pointer; background: rgba(255,255,255,0.05); padding: 8px; text-align: center; }
-        .avatar-item img { width: 100%; border-radius: 12px; height: 60px; object-fit: cover; }
+        .avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; max-height: 200px; overflow-y: auto; padding: 5px; }
+        .avatar-item { position: relative; border-radius: 16px; border: 2px solid transparent; cursor: pointer; background: rgba(255,255,255,0.05); padding: 5px; }
+        .avatar-item img { width: 100%; border-radius: 12px; height: 55px; object-fit: cover; }
         .avatar-item.selected { border-color: var(--accent-color); background: rgba(139, 92, 246, 0.2); }
-        .vip-badge { position: absolute; top: 4px; right: 4px; background: var(--gold); color: #000; font-size: 0.65rem; font-weight: 900; padding: 2px 5px; border-radius: 6px; }
 
         .upload-box {
-            border: 2px dashed var(--border-color); border-radius: 12px; padding: 10px; margin-top: 10px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--text-secondary); font-size: 0.85rem;
+            border: 2px dashed var(--border-color); border-radius: 12px; padding: 12px; margin-top: 12px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--text-secondary); font-size: 0.9rem;
         }
 
         .btn-primary {
             width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--gradient);
-            color: white; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
-            margin-top: 10px;
+            color: white; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-top: 10px;
         }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; filter: grayscale(1); }
 
         .record-btn {
             background: #ef4444; color: white; border: none; border-radius: 50%; width: 75px; height: 75px;
-            font-size: 1.8rem; cursor: pointer; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); margin: 15px 0;
+            font-size: 1.8rem; cursor: pointer; margin: 15px 0;
         }
-        .record-btn.recording { animation: pulse 1s infinite; background: #dc2626; }
+        .record-btn.recording { animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-
-        .playback-box {
-            background: rgba(0, 0, 0, 0.3); border-radius: 16px; padding: 15px; margin-top: 15px; border: 1px solid var(--border-color);
-        }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
-        <div class="logo">
-            <i class="fa-solid fa-gamepad"></i>
-            <span>سرحان بارتي</span>
-        </div>
+        <div class="logo">Sarhan Party</div>
         <div class="settings-btns">
+            <button class="icon-btn" onclick="toggleLanguage()"><i class="fa-solid fa-globe"></i> <span id="lang-btn-text">EN</span></button>
             <button class="icon-btn" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i></button>
         </div>
     </div>
 
     <div class="container">
-        <!-- Screen 1: Login -->
+        <!-- Screen 1: Login & Custom Avatar -->
         <div id="screen-login" class="screen active">
-            <h2 style="margin-bottom: 20px;">مرحباً بك في اللعبة!</h2>
+            <h2 id="txt-welcome" style="margin-bottom: 20px;">مرحباً بك في اللعبة!</h2>
             <div class="form-group">
-                <label for="username">اسم اللاعب</label>
+                <label id="lbl-username" for="username">اسم اللاعب (15 حرف كحد أقصى)</label>
                 <input type="text" id="username" maxlength="15" placeholder="أدخل اسمك هنا...">
             </div>
             
             <div class="avatar-section">
-                <label>اختر شخصيتك</label>
+                <label id="lbl-avatar">اختر شخصيتك أو ارفع صورتك الخاصة</label>
                 <div class="avatar-grid" id="avatar-grid"></div>
+                
+                <div class="upload-box" onclick="document.getElementById('custom-avatar-input').click()">
+                    <i class="fa-solid fa-upload"></i>
+                    <span id="txt-upload">رفع صورة شخصية مخصصة</span>
+                    <input type="file" id="custom-avatar-input" accept="image/*" style="display:none;" onchange="handleCustomAvatar(this)">
+                </div>
             </div>
-            <button class="btn-primary" onclick="goToLobby()">متابعة للردهة</button>
+            <button class="btn-primary" id="btn-continue" onclick="goToLobby()">متابعة للردهة</button>
         </div>
 
         <!-- Screen 2: Lobby -->
         <div id="screen-lobby" class="screen">
-            <h2>صالة الانتظار</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 20px;">أنشئ غرفة جديدة أو انضم لغرفة موجودة</p>
-
-            <button class="btn-primary" style="margin-bottom: 20px;" onclick="createRoom()">إنشاء غرفة جديدة</button>
-            
+            <h2 id="txt-lobby-title">صالة الانتظار</h2>
+            <button class="btn-primary" style="margin-bottom: 20px;" id="btn-create-room" onclick="createRoom()">إنشاء غرفة جديدة</button>
             <div class="form-group">
                 <input type="text" id="room-code-input" placeholder="أدخل رقم الغرفة" style="text-align: center; font-size: 1.2rem;">
             </div>
-            <button class="btn-primary" style="background: transparent; border: 2px solid var(--accent-color);" onclick="joinRoom()">الانضمام للغرفة</button>
+            <button class="btn-primary" style="background: transparent; border: 2px solid var(--accent-color);" id="btn-join-room" onclick="joinRoom()">الانضمام للغرفة</button>
         </div>
 
         <!-- Screen 3: Game Room -->
         <div id="screen-room" class="screen">
             <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                <span>رقم الغرفة:</span>
-                <div style="font-size: 1.5rem; letter-spacing: 4px; font-weight: 900; color: var(--accent-color);" id="display-room-code">----</div>
+                <span id="txt-room-code">رقم الغرفة:</span>
+                <div style="font-size: 1.5rem; font-weight: 900; color: var(--accent-color);" id="display-room-code">----</div>
             </div>
-            <h3>اللاعبون المتواجدون (<span id="player-count">0</span>/5)</h3>
-            <div id="players-list" style="display: flex; flex-direction: column; gap: 10px; margin: 20px 0;"></div>
-            
-            <button class="btn-primary" id="btn-start-game" onclick="startGameHost()" disabled>
-                بدء اللعبة الآن
-            </button>
+            <button class="btn-primary" id="btn-start-game" onclick="startGameHost()">بدء اللعبة الآن</button>
         </div>
 
         <!-- Screen 4: Game Arena -->
@@ -169,24 +154,50 @@
                 <h3 id="stage-title">استمع للصوت وقم بتقليده!</h3>
             </div>
             <div style="margin: 20px 0;">
-                <button class="btn-primary" style="margin-bottom: 15px;" onclick="playTargetSound()">
-                    <i class="fa-solid fa-volume-high"></i> تشغيل الصوت المطلوب
+                <button class="btn-primary" style="margin-bottom: 15px;" id="btn-play-sound" onclick="playTargetSound()">
+                    <i class="fa-solid fa-volume-high"></i> <span id="txt-play-sound">تشغيل الصوت المطلوب</span>
                 </button>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">اضغط على الميكروفون للتقليد (3 ثوانٍ):</p>
                 <button class="record-btn" id="btn-record" onclick="startRecording3s()">
                     <i class="fa-solid fa-microphone"></i>
                 </button>
                 <div id="recording-timer" style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 10px;"></div>
             </div>
-
-            <div id="waiting-others-msg" style="display:none; color: var(--gold); font-weight: bold; margin-top: 15px;">
-                <i class="fa-solid fa-check-circle"></i> تم تسجيل صوتك بنجاح!
-            </div>
         </div>
     </div>
 
     <script>
-        // الأصوات التسعة المرفوعة في المستودع بنفس الأسماء
+        const translations = {
+            ar: {
+                welcome: "مرحباً بك في اللعبة!",
+                lblUsername: "اسم اللاعب (15 حرف كحد أقصى)",
+                lblAvatar: "اختر شخصيتك أو ارفع صورتك الخاصة",
+                upload: "رفع صورة شخصية مخصصة",
+                continue: "متابعة للردهة",
+                lobbyTitle: "صالة الانتظار",
+                createRoom: "إنشاء غرفة جديدة",
+                joinRoom: "الانضمام للغرفة",
+                roomCode: "رقم الغرفة:",
+                startGame: "بدء اللعبة الآن",
+                playSound: "تشغيل الصوت المطلوب",
+                langBtn: "EN"
+            },
+            en: {
+                welcome: "Welcome to the Game!",
+                lblUsername: "Player Name (15 chars max)",
+                lblAvatar: "Choose Avatar or Upload Custom Photo",
+                upload: "Upload Custom Photo",
+                continue: "Continue to Lobby",
+                lobbyTitle: "Waiting Lobby",
+                createRoom: "Create New Room",
+                joinRoom: "Join Room",
+                roomCode: "Room Code:",
+                startGame: "Start Game Now",
+                playSound: "Play Target Sound",
+                langBtn: "عربي"
+            }
+        };
+
+        let currentLang = 'ar';
         const realSoundList = [
             { id: 1, name: "صوت: Huh? 🤔", src: "./universfield-confused-male-voice-huh-352694.mp3" },
             { id: 2, name: "عبارة: Game Over 🎮", src: "./universfield-game-over-deep-male-voice-clip-352695.mp3" },
@@ -199,8 +210,63 @@
             { id: 9, name: "صوت: شهقة إندهام 😲", src: "./freesound_community-male-gasp-1-7183.mp3" }
         ];
 
+        const defaultAvatars = [
+            'https://api.dicebear.com/7.x/bottts/svg?seed=1',
+            'https://api.dicebear.com/7.x/bottts/svg?seed=2',
+            'https://api.dicebear.com/7.x/bottts/svg?seed=3',
+            'https://api.dicebear.com/7.x/bottts/svg?seed=4'
+        ];
+
+        let selectedAvatar = defaultAvatars[0];
         let currentStageIndex = 0;
         let currentAudioObject = null;
+
+        window.onload = () => {
+            const grid = document.getElementById('avatar-grid');
+            defaultAvatars.forEach((src, idx) => {
+                grid.innerHTML += `
+                    <div class="avatar-item ${idx===0?'selected':''}" onclick="selectAv(this, '${src}')">
+                        <img src="${src}">
+                    </div>`;
+            });
+        };
+
+        function selectAv(el, src) {
+            document.querySelectorAll('.avatar-item').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedAvatar = src;
+        }
+
+        function handleCustomAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedAvatar = e.target.result;
+                    alert(currentLang === 'ar' ? "تم تحميل صورتك بنجاح!" : "Photo uploaded successfully!");
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            document.documentElement.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.setAttribute('lang', currentLang);
+
+            const t = translations[currentLang];
+            document.getElementById('txt-welcome').innerText = t.welcome;
+            document.getElementById('lbl-username').innerText = t.lblUsername;
+            document.getElementById('lbl-avatar').innerText = t.lblAvatar;
+            document.getElementById('txt-upload').innerText = t.upload;
+            document.getElementById('btn-continue').innerText = t.continue;
+            document.getElementById('txt-lobby-title').innerText = t.lobbyTitle;
+            document.getElementById('btn-create-room').innerText = t.createRoom;
+            document.getElementById('btn-join-room').innerText = t.joinRoom;
+            document.getElementById('txt-room-code').innerText = t.roomCode;
+            document.getElementById('btn-start-game').innerText = t.startGame;
+            document.getElementById('txt-play-sound').innerText = t.playSound;
+            document.getElementById('lang-btn-text').innerText = t.langBtn;
+        }
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -209,7 +275,7 @@
 
         function goToLobby() {
             const username = document.getElementById('username').value.trim();
-            if(!username) return alert("يرجى إدخال اسمك!");
+            if(!username) return alert(currentLang === 'ar' ? "يرجى إدخال اسمك!" : "Please enter your name!");
             showScreen('screen-lobby');
         }
 
@@ -218,32 +284,22 @@
             showScreen('screen-room');
         }
 
-        function joinRoom() {
-            showScreen('screen-room');
-        }
-
-        function startGameHost() {
-            showScreen('screen-game');
-            setupStage(0);
-        }
+        function joinRoom() { showScreen('screen-room'); }
+        function startGameHost() { showScreen('screen-game'); setupStage(0); }
 
         function setupStage(index) {
             currentStageIndex = index;
-            document.getElementById('stage-indicator').innerText = `المرحلة ${index + 1} / ${realSoundList.length}`;
+            document.getElementById('stage-indicator').innerText = `${currentLang === 'ar' ? 'المرحلة' : 'Stage'} ${index + 1} / ${realSoundList.length}`;
             document.getElementById('stage-title').innerText = realSoundList[index].name;
         }
 
         function playTargetSound() {
             const currentSound = realSoundList[currentStageIndex];
             if (currentSound && currentSound.src) {
-                if (currentAudioObject) {
-                    currentAudioObject.pause();
-                }
+                if (currentAudioObject) currentAudioObject.pause();
                 currentAudioObject = new Audio(currentSound.src);
-                
                 currentAudioObject.play().catch(err => {
-                    console.error("خطأ تشغيل الصوت:", err);
-                    alert("تأكد من إدراج ملفات الصوت بنفس اسم الملف في المستودع على GitHub Pages.");
+                    alert(currentLang === 'ar' ? "تأكد من تواجد الملفات بنفس الاسم في المستودع." : "Ensure files exist in repository.");
                 });
             }
         }
