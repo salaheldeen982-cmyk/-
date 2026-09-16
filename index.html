@@ -78,7 +78,7 @@
         }
 
         .avatar-section { margin: 20px 0; }
-        .avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+        .avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; max-height: 220px; overflow-y: auto; padding: 5px; }
         .avatar-item { position: relative; border-radius: 16px; border: 2px solid transparent; cursor: pointer; background: rgba(255,255,255,0.05); padding: 8px; text-align: center; }
         .avatar-item img { width: 100%; border-radius: 12px; height: 60px; object-fit: cover; }
         .avatar-item.selected { border-color: var(--accent-color); background: rgba(139, 92, 246, 0.2); }
@@ -93,6 +93,7 @@
             width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--gradient);
             color: white; font-size: 1.1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
         }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
         .record-btn {
             background: #ef4444; color: white; border: none; border-radius: 50%; width: 75px; height: 75px;
@@ -147,7 +148,7 @@
             <div class="form-group">
                 <label>فئة الأصوات المراد تقليدها:</label>
                 <select id="sound-category">
-                    <option value="random">🔀 أصوات عشوائية مشكلة (7 مراحل متنوعة)</option>
+                    <option value="random">🔀 أصوات عشوائية مشكلة (7 مراحل)</option>
                     <option value="animals">🦁 أصوات حيوانات (7 مراحل)</option>
                     <option value="quotes">💬 عبارات ومقاطع مشهورة (7 مراحل)</option>
                     <option value="memes">😂 أصوات وميمز التيك توك (7 مراحل)</option>
@@ -170,7 +171,10 @@
             </div>
             <h3>اللاعبون المتواجدون (<span id="player-count">0</span>/5)</h3>
             <div id="players-list" style="display: flex; flex-direction: column; gap: 10px; margin: 20px 0;"></div>
-            <button class="btn-primary" id="btn-start-game" onclick="startGameHost()" style="display:none;">بدء اللعبة الآن!</button>
+            
+            <button class="btn-primary" id="btn-start-game" onclick="startGameHost()" style="display:none;" disabled>
+                بدء اللعبة الان (يلزم 2 لاعبين على الأقل)
+            </button>
             <p id="txt-waiting-host" style="color: var(--gold); display:none;">في انتظار المضيف لبدء اللعبة...</p>
         </div>
 
@@ -276,16 +280,16 @@
     </script>
 
     <script>
-        // قائمة الأصوات كاملة لجميع الفئات وتستند إلى ملفات صوتية حقيقية ومباشرة
+        // الأصوات معتمدة على توليد وترددات صوتية تفاعلية ونطق برمجياً لضمان عدم الانقطاع
         const soundCategories = {
             animals: [
-                { id: 1, name: "زئير الأسد", url: "https://actions.google.com/sounds/v1/animals/lion_roar.ogg" },
-                { id: 2, name: "مواء القطة", url: "https://actions.google.com/sounds/v1/animals/cat_purr_meow.ogg" },
-                { id: 3, name: "صياح الديك", url: "https://actions.google.com/sounds/v1/animals/rooster_crow.ogg" },
-                { id: 4, name: "نباح الكلب", url: "https://actions.google.com/sounds/v1/animals/dog_bark_two.ogg" },
-                { id: 5, name: "نهيق الحمار", pitch: 350, speech: "نهيق حمار" },
-                { id: 6, name: "خوار البقرة", url: "https://actions.google.com/sounds/v1/animals/cow_moo.ogg" },
-                { id: 7, name: "عواء الذئب", pitch: 300, speech: "عواء ذئب" }
+                { id: 1, name: "زئير الأسد 🦁", type: "synth", baseFreq: 110, endFreq: 40, duration: 1.8, waveform: "sawtooth" },
+                { id: 2, name: "مواء القطة 🐱", type: "synth", baseFreq: 600, endFreq: 450, duration: 0.8, waveform: "sine" },
+                { id: 3, name: "صياح الديك 🐓", type: "synth", baseFreq: 400, endFreq: 750, duration: 1.2, waveform: "triangle" },
+                { id: 4, name: "نباح الكلب 🐕", type: "synth", baseFreq: 220, endFreq: 110, duration: 0.3, waveform: "square" },
+                { id: 5, name: "نهيق الحمار 🫏", speech: "أووو إيـــر" },
+                { id: 6, name: "خوار البقرة 🐮", type: "synth", baseFreq: 130, endFreq: 90, duration: 1.5, waveform: "sine" },
+                { id: 7, name: "عواء الذئب 🐺", type: "synth", baseFreq: 300, endFreq: 600, duration: 2.2, waveform: "sine" }
             ],
             quotes: [
                 { id: 1, name: "يا حلاوة!", speech: "يا حلاوة" },
@@ -297,8 +301,8 @@
                 { id: 7, name: "أشوفك على خير!", speech: "أشوفك على خير" }
             ],
             memes: [
-                { id: 1, name: "ضحكة الميمز الشهيرة", url: "https://actions.google.com/sounds/v1/human_voices/cartoon_giggle.ogg" },
-                { id: 2, name: "الضحكة الشريرة", url: "https://actions.google.com/sounds/v1/human_voices/evil_laugh.ogg" },
+                { id: 1, name: "ضحكة كرتونية 😂", type: "synth", baseFreq: 350, endFreq: 700, duration: 0.6, waveform: "sine" },
+                { id: 2, name: "الضحكة الشريرة 😈", type: "synth", baseFreq: 120, endFreq: 70, duration: 1.6, waveform: "sawtooth" },
                 { id: 3, name: "إيه ده يا راجل!", speech: "إيه ده يا راجل" },
                 { id: 4, name: "مش ممكن أبداً!", speech: "مش ممكن أبداً" },
                 { id: 5, name: "يا نهار أبيض!", speech: "يا نهار أبيض" },
@@ -306,30 +310,35 @@
                 { id: 7, name: "جامد جداً!", speech: "جامد جداً" }
             ],
             frequencies: [
-                { id: 1, name: "تردد منخفض 150Hz", pitch: 150 },
-                { id: 2, name: "تردد 250Hz", pitch: 250 },
-                { id: 3, name: "تردد متوسط 350Hz", pitch: 350 },
-                { id: 4, name: "تردد 450Hz", pitch: 450 },
-                { id: 5, name: "تردد حاد 550Hz", pitch: 550 },
-                { id: 6, name: "تردد مرتفع 650Hz", pitch: 650 },
-                { id: 7, name: "تردد عالي جداً 750Hz", pitch: 750 }
+                { id: 1, name: "تردد منخفض 150Hz", type: "synth", baseFreq: 150, endFreq: 150, duration: 1.2, waveform: "sine" },
+                { id: 2, name: "تردد 250Hz", type: "synth", baseFreq: 250, endFreq: 250, duration: 1.2, waveform: "sine" },
+                { id: 3, name: "تردد متوسط 350Hz", type: "synth", baseFreq: 350, endFreq: 350, duration: 1.2, waveform: "sine" },
+                { id: 4, name: "تردد 450Hz", type: "synth", baseFreq: 450, endFreq: 450, duration: 1.2, waveform: "sine" },
+                { id: 5, name: "تردد حاد 550Hz", type: "synth", baseFreq: 550, endFreq: 550, duration: 1.2, waveform: "sine" },
+                { id: 6, name: "تردد مرتفع 650Hz", type: "synth", baseFreq: 650, endFreq: 650, duration: 1.2, waveform: "sine" },
+                { id: 7, name: "تردد عالي جداً 750Hz", type: "synth", baseFreq: 750, endFreq: 750, duration: 1.2, waveform: "sine" }
             ],
             random: [
-                { id: 1, name: "زئير الأسد (حيوانات)", url: "https://actions.google.com/sounds/v1/animals/lion_roar.ogg" },
-                { id: 2, name: "يا حلاوة! (عبارات)", speech: "يا حلاوة" },
-                { id: 3, name: "تردد حاد 550Hz (نغمات)", pitch: 550 },
-                { id: 4, name: "الضحكة الشريرة (ميمز)", url: "https://actions.google.com/sounds/v1/human_voices/evil_laugh.ogg" },
-                { id: 5, name: "صياح الديك (حيوانات)", url: "https://actions.google.com/sounds/v1/animals/rooster_crow.ogg" },
-                { id: 6, name: "إيه ده يا راجل! (ميمز)", speech: "إيه ده يا راجل" },
-                { id: 7, name: "تردد منخفض 180Hz (نغمات)", pitch: 180 }
+                { id: 1, name: "زئير الأسد 🦁", type: "synth", baseFreq: 110, endFreq: 40, duration: 1.8, waveform: "sawtooth" },
+                { id: 2, name: "يا حلاوة! 💬", speech: "يا حلاوة" },
+                { id: 3, name: "تردد حاد 550Hz 🎵", type: "synth", baseFreq: 550, endFreq: 550, duration: 1.2, waveform: "sine" },
+                { id: 4, name: "الضحكة الشريرة 😈", type: "synth", baseFreq: 120, endFreq: 70, duration: 1.6, waveform: "sawtooth" },
+                { id: 5, name: "صياح الديك 🐓", type: "synth", baseFreq: 400, endFreq: 750, duration: 1.2, waveform: "triangle" },
+                { id: 6, name: "إيه ده يا راجل! 😂", speech: "إيه ده يا راجل" },
+                { id: 7, name: "مواء القطة 🐱", type: "synth", baseFreq: 600, endFreq: 450, duration: 0.8, waveform: "sine" }
             ]
         };
 
+        // تم إضافة شخصيات جديدة ومتنوعة
         const defaultAvatars = [
             { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=1', isVip: false },
             { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=2', isVip: false },
+            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=3', isVip: false },
+            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=4', isVip: false },
             { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP1', isVip: true },
-            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP2', isVip: true }
+            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP2', isVip: true },
+            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP3', isVip: true },
+            { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=VIP4', isVip: true }
         ];
 
         let selectedAvatar = defaultAvatars[0].src;
@@ -422,6 +431,16 @@
                         ${p.host ? '<span style="font-size:0.75rem; background:var(--accent-color); padding:2px 8px; border-radius:6px;">المضيف</span>' : ''}
                     </div>`;
             });
+
+            // التحكم في تفعيل زر البدء لـ Host (يجب وجود لاعبين أو أكثر)
+            const startBtn = document.getElementById('btn-start-game');
+            if (playersList.length >= 2) {
+                startBtn.disabled = false;
+                startBtn.innerText = "بدء اللعبة الآن!";
+            } else {
+                startBtn.disabled = true;
+                startBtn.innerText = "في انتظار لاعب إضافي للبدء...";
+            }
         };
 
         function startGameHost() {
@@ -451,37 +470,38 @@
             const list = soundCategories[window.currentRoomCategory] || soundCategories.animals;
             const stage = list[currentStageIndex];
 
-            // 1. تشغيل الملف المباشر إن وجد
-            if (stage.url) {
-                const audio = new Audio(stage.url);
-                audio.play().catch(e => console.log("خطأ في التشغيل:", e));
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            // 1. تشغيل الأصوات المركبة من خلال الترددات (تضمن عمل كافة الأصوات بدون انقطاع أو حظر من المتصفح)
+            if (stage.type === "synth") {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = stage.waveform || 'sine';
+                
+                const now = audioCtx.currentTime;
+                osc.frequency.setValueAtTime(stage.baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(stage.endFreq, now + stage.duration);
+                
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + stage.duration);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start(now);
+                osc.stop(now + stage.duration);
                 return;
             }
 
-            // 2. النطق الصوتي إن وجد
+            // 2. النطق الصوتي للعبارات
             if (stage.speech && 'speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(stage.speech);
                 utterance.lang = 'ar-SA';
                 utterance.rate = 0.9;
                 window.speechSynthesis.speak(utterance);
-                return;
             }
-
-            // 3. الترددات الصوتية
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(stage.pitch || 440, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 1.2);
         }
 
         async function toggleRecording() {
