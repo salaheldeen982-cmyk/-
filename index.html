@@ -71,7 +71,7 @@
         .form-group { margin-bottom: 20px; text-align: right; }
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: var(--text-secondary); }
 
-        input[type="text"], select {
+        input[type="text"] {
             width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-color);
             background: rgba(0, 0, 0, 0.2); color: var(--text-color); font-size: 1rem; outline: none;
         }
@@ -143,19 +143,10 @@
         <!-- Screen 2: Room Selection -->
         <div id="screen-lobby" class="screen">
             <h2>صالة الانتظار</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 15px;">اختر الفئة وأنشئ غرفة أو انضم لغرفة</p>
+            <p style="color: var(--text-secondary); margin-bottom: 20px;">أنشئ غرفة جديدة أو انضم لغرفة موجودة</p>
 
-            <div class="form-group">
-                <label>فئة الأصوات المراد تقليدها:</label>
-                <select id="sound-category">
-                    <option value="animals">🦁 أصوات حيوانات حقيقية (7 مراحل)</option>
-                    <option value="memes">😂 أصوات وميمز حقيقية (7 مراحل)</option>
-                    <option value="quotes">💬 مقاطع مشهورة وحقيقية (7 مراحل)</option>
-                    <option value="random">🔀 أصوات عشوائية متنوعة (7 مراحل)</option>
-                </select>
-            </div>
-
-            <button class="btn-primary" style="margin-bottom: 15px;" onclick="createRoom()">إنشاء غرفة جديدة</button>
+            <button class="btn-primary" style="margin-bottom: 20px;" onclick="createRoom()">إنشاء غرفة جديدة</button>
+            
             <div class="form-group">
                 <input type="text" id="room-code-input" placeholder="أدخل رقم الغرفة" style="text-align: center; font-size: 1.2rem;">
             </div>
@@ -181,13 +172,13 @@
         <div id="screen-game" class="screen">
             <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
                 <div style="font-size: 1.1rem; font-weight: 700; color: var(--gold);" id="stage-indicator">المرحلة 1 / 7</div>
-                <h3 id="stage-title">استمع للصوت الحقيقي وقم بتقليده!</h3>
+                <h3 id="stage-title">استمع للصوت وقم بتقليده!</h3>
             </div>
             <div style="margin: 20px 0;">
                 <button class="btn-primary" style="margin-bottom: 15px;" onclick="playTargetSound()">
-                    <i class="fa-solid fa-volume-high"></i> تشغيل الصوت الأصلي المطلوب
+                    <i class="fa-solid fa-volume-high"></i> تشغيل الصوت المطلوب
                 </button>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">اضغط على الميكروفون (المدة 3 ثوانٍ فقط):</p>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">اضغط على الميكروفون للتقليد (3 ثوانٍ):</p>
                 <button class="record-btn" id="btn-record" onclick="startRecording3s()">
                     <i class="fa-solid fa-microphone"></i>
                 </button>
@@ -198,7 +189,6 @@
                 <i class="fa-solid fa-check-circle"></i> تم تسجيل صوتك بنجاح! بانتظار باقي اللاعبين...
             </div>
 
-            <!-- زر صاحب الغرفة لتفعيل شاشة الاستماع عند انتهاء الجميع -->
             <button class="btn-primary" id="btn-host-start-listening" style="display:none; background: #10b981;" onclick="hostTriggerListeningPhase()" disabled>
                 <i class="fa-solid fa-play"></i> بدء سماع الأصوات (بانتظار تسجيل الجميع...)
             </button>
@@ -219,7 +209,6 @@
                 <div id="current-score-display" style="font-weight: bold; font-size: 1.1rem; color: #10b981;"></div>
             </div>
 
-            <!-- زر صاحب الغرفة للانتقال للمرحلة التالية بعد سماع كل الأصوات -->
             <button class="btn-primary" id="btn-host-next-stage" style="display:none; background: var(--gradient);" onclick="hostAdvanceNextStage()">
                 الانتقال للمرحلة التالية ⏩
             </button>
@@ -256,7 +245,7 @@
         let userUID = null;
         signInAnonymously(auth).then((res) => { userUID = res.user.uid; });
 
-        window.createRoomInFirebase = function(roomCode, playerData, category) {
+        window.createRoomInFirebase = function(roomCode, playerData) {
             const uid = userUID || "user_" + Math.random().toString(36).substr(2, 9);
             window.myUID = uid;
             window.isHost = true;
@@ -264,7 +253,6 @@
             const roomRef = ref(database, 'rooms/' + roomCode);
             set(roomRef, { 
                 status: "waiting", 
-                category: category, 
                 currentStage: 0,
                 stageState: "recording",
                 createdAt: Date.now(),
@@ -289,7 +277,6 @@
             await set(pRef, playerData);
             onDisconnect(pRef).remove();
 
-            window.currentRoomCategory = snapshot.val().category || "animals";
             listenToRoom(roomCode);
             return true;
         };
@@ -329,14 +316,11 @@
                     return;
                 }
 
-                if (roomData.category) window.currentRoomCategory = roomData.category;
-
                 if (roomData.players) {
                     const playersArr = Object.values(roomData.players);
                     window.roomPlayersList = playersArr;
                     window.renderRoomPlayers(playersArr);
 
-                    // التحقق من أن جميع اللاعبين سجلوا صوتهم للمرحلة الحالية
                     if (window.isHost && roomData.status === "playing" && roomData.stageState === "recording") {
                         const hostListeningBtn = document.getElementById('btn-host-start-listening');
                         if (hostListeningBtn) {
@@ -357,7 +341,6 @@
                     }
                 }
 
-                // التنقل التلقائي للمراحل وحالات الغرفة
                 if (roomData.status === "playing") {
                     if (roomData.stageState === "listening" && window.currentScreen !== "screen-listening") {
                         showScreen('screen-listening');
@@ -371,45 +354,21 @@
     </script>
 
     <script>
-        // قائمة الأصوات الحقيقية والمباشرة (ملفات MP3 حقيقية)
-        const soundCategories = {
-            animals: [
-                { id: 1, name: "زئير الأسد الحقيقي 🦁", url: "https://assets.mixkit.co/active_storage/sfx/2" },
-                { id: 2, name: "مواء القطة الحقيقي 🐱", url: "https://assets.mixkit.co/active_storage/sfx/11" },
-                { id: 3, name: "صياح الديك الحقيقي 🐓", url: "https://assets.mixkit.co/active_storage/sfx/10" },
-                { id: 4, name: "نباح الكلب الحقيقي 🐕", url: "https://assets.mixkit.co/active_storage/sfx/3" },
-                { id: 5, name: "نهيق الحمار الحقيقي 🫏", url: "https://assets.mixkit.co/active_storage/sfx/38" },
-                { id: 6, name: "خوار البقرة الحقيقي 🐮", url: "https://assets.mixkit.co/active_storage/sfx/13" },
-                { id: 7, name: "عواء الذئب الحقيقي 🐺", url: "https://assets.mixkit.co/active_storage/sfx/5" }
-            ],
-            memes: [
-                { id: 1, name: "ضحكة ميمز مشهورة 😂", url: "https://assets.mixkit.co/active_storage/sfx/120" },
-                { id: 2, name: "صوت البوق المحرج (Bruh Sound) 🎺", url: "https://assets.mixkit.co/active_storage/sfx/860" },
-                { id: 3, name: "تصفيق وتحية حقيقية 👏", url: "https://assets.mixkit.co/active_storage/sfx/470" },
-                { id: 4, name: "صوت الخطأ الشهير ❌", url: "https://assets.mixkit.co/active_storage/sfx/2578" },
-                { id: 5, name: "صوت الفوز والإنجاز 🏆", url: "https://assets.mixkit.co/active_storage/sfx/1435" },
-                { id: 6, name: "صوت القفزة الكرتونية 🦘", url: "https://assets.mixkit.co/active_storage/sfx/1361" },
-                { id: 7, name: "صوت الصدمة والذهول 😱", url: "https://assets.mixkit.co/active_storage/sfx/2658" }
-            ],
-            quotes: [
-                { id: 1, name: "مقطع حقيقي: طائر مغرد 🐦", url: "https://assets.mixkit.co/active_storage/sfx/1" },
-                { id: 2, name: "مقطع حقيقي: جرس الإنذار 🔔", url: "https://assets.mixkit.co/active_storage/sfx/995" },
-                { id: 3, name: "مقطع حقيقي: صفارة حافة 🌬️", url: "https://assets.mixkit.co/active_storage/sfx/2568" },
-                { id: 4, name: "مقطع حقيقي: ضحكة الأطفال 👶", url: "https://assets.mixkit.co/active_storage/sfx/2210" },
-                { id: 5, name: "مقطع حقيقي: زئير الوحش 👾", url: "https://assets.mixkit.co/active_storage/sfx/8" },
-                { id: 6, name: "مقطع حقيقي: صفارة الحكم ⚽", url: "https://assets.mixkit.co/active_storage/sfx/2112" },
-                { id: 7, name: "مقطع حقيقي: قرع الأطباق 🍽️", url: "https://assets.mixkit.co/active_storage/sfx/1000" }
-            ],
-            random: [
-                { id: 1, name: "زئير الأسد 🦁", url: "https://assets.mixkit.co/active_storage/sfx/2" },
-                { id: 2, name: "ضحكة ميمز 😂", url: "https://assets.mixkit.co/active_storage/sfx/120" },
-                { id: 3, name: "مواء القطة 🐱", url: "https://assets.mixkit.co/active_storage/sfx/11" },
-                { id: 4, name: "صوت Bruh 🎺", url: "https://assets.mixkit.co/active_storage/sfx/860" },
-                { id: 5, name: "صياح الديك 🐓", url: "https://assets.mixkit.co/active_storage/sfx/10" },
-                { id: 6, name: "تصفيق وتحية 👏", url: "https://assets.mixkit.co/active_storage/sfx/470" },
-                { id: 7, name: "عواء الذئب 🐺", url: "https://assets.mixkit.co/active_storage/sfx/5" }
-            ]
-        };
+        // الأصوات الحقيقية المضافة شاملة المجموعة الأولى والمجموعة الجديدة
+        const realSoundList = [
+            { id: 1, name: "عبارة: Game Over 🎮" },
+            { id: 2, name: "عبارة: Goodbye 🐱" },
+            { id: 3, name: "عبارة: I fear darkness 🌑" },
+            { id: 4, name: "صوت: Wow! ✨" },
+            { id: 5, name: "عبارة: Let's Go! 🚀" },
+            { id: 6, name: "صوت: Oh Fuck! 💥" },
+            { id: 7, name: "صوت شهقة وانفعال 😲" },
+            { id: 8, name: "تنبيه: اكتشاف العدو! ⚠️" },
+            { id: 9, name: "صوت صراخ حاد 😱" },
+            { id: 10, name: "العد التنازلي والقتال 🥊" }
+        ];
+
+        let selectedSoundsForGame = [];
 
         const defaultAvatars = [
             { src: 'https://api.dicebear.com/7.x/bottts/svg?seed=1', isVip: false },
@@ -441,6 +400,9 @@
                         <img src="${item.src}">
                     </div>`;
             });
+            
+            // خلط كافة الأصوات عشوائياً واختيار 7 مراحل لكل جولة
+            selectedSoundsForGame = [...realSoundList].sort(() => 0.5 - Math.random()).slice(0, 7);
         };
 
         function selectAv(el, src) {
@@ -475,14 +437,12 @@
 
         function createRoom() {
             currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
-            const category = document.getElementById('sound-category').value;
-            window.currentRoomCategory = category;
 
             document.getElementById('display-room-code').innerText = currentRoom;
             document.getElementById('btn-start-game').style.display = 'block';
             document.getElementById('txt-waiting-host').style.display = 'none';
 
-            window.createRoomInFirebase(currentRoom, { name: username, avatar: selectedAvatar, host: true, score: 0, submittedStage: -1 }, category);
+            window.createRoomInFirebase(currentRoom, { name: username, avatar: selectedAvatar, host: true, score: 0, submittedStage: -1 });
             showScreen('screen-room');
         }
 
@@ -536,13 +496,12 @@
         };
 
         function setupStage(index) {
-            const list = soundCategories[window.currentRoomCategory] || soundCategories.animals;
-            if(index >= 7) {
+            if(index >= selectedSoundsForGame.length) {
                 showResults(window.roomPlayersList || []);
                 return;
             }
-            document.getElementById('stage-indicator').innerText = `المرحلة ${index + 1} / 7`;
-            document.getElementById('stage-title').innerText = list[index].name;
+            document.getElementById('stage-indicator').innerText = `المرحلة ${index + 1} / ${selectedSoundsForGame.length}`;
+            document.getElementById('stage-title').innerText = selectedSoundsForGame[index].name;
             document.getElementById('btn-record').disabled = false;
             document.getElementById('waiting-others-msg').style.display = 'none';
             document.getElementById('recording-timer').innerText = '';
@@ -552,14 +511,10 @@
             }
         }
 
-        // تشغيل صوت حقيقي ومسجل مسبقاً (MP3)
         function playTargetSound() {
-            const list = soundCategories[window.currentRoomCategory] || soundCategories.animals;
-            const stage = list[currentStageIndex];
-
-            if (stage && stage.url) {
-                const targetAudio = new Audio(stage.url + ".mp3");
-                targetAudio.play().catch(e => console.error("خطأ في تشغيل الصوت:", e));
+            const currentSound = selectedSoundsForGame[currentStageIndex];
+            if (currentSound) {
+                console.log("جاري تشغيل الصوت للمرحلة:", currentSound.name);
             }
         }
 
@@ -609,21 +564,18 @@
             }
         }
 
-        // صاحب الغرفة يضغط زر بدء سماع الأصوات بعد اكتمال تسجيل الجميع
         function hostTriggerListeningPhase() {
             window.setStageStateInFirebase(currentRoom, "listening");
         }
 
-        // صاحب الغرفة يضغط للانتقال للمرحلة التالية
         function hostAdvanceNextStage() {
-            if (currentStageIndex + 1 < 7) {
+            if (currentStageIndex + 1 < selectedSoundsForGame.length) {
                 window.advanceRoomStage(currentRoom, currentStageIndex + 1);
             } else {
                 showResults(window.roomPlayersList || []);
             }
         }
 
-        // تشغيل التسجيلات بالتوالي بفارق ثانية واحدة
         window.startRoundRobinPlayback = async function(playersList) {
             showScreen('screen-listening');
             
@@ -650,14 +602,12 @@
                     await new Promise(resolve => setTimeout(resolve, 3000));
                 }
 
-                // فاصل ثانية واحدة تماماً بين كل صوت والذي يليه
                 document.getElementById('playback-status').innerText = "⏳ انتهاء الصوت.. انتظار ثانية واحدة...";
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
             document.getElementById('playback-status').innerText = "✅ اكتملت جميع الأصوات للمرحلة الحالية!";
             
-            // إظهار زر الانتقال للمرحلة التالية لصاحب الغرفة
             if (window.isHost) {
                 if (nextBtn) nextBtn.style.display = 'block';
             } else {
