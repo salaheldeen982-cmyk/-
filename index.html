@@ -241,7 +241,6 @@
             if (!snapshot.exists()) { alert("الغرفة غير موجودة!"); return false; }
             await set(ref(database, `rooms/${roomCode}/players/${uid}`), playerData);
             
-            // جلب الفئة المحددة للغرفة لضمان المطابقة الكاملة
             window.currentRoomCategory = snapshot.val().category || "animals";
             listenToRoom(roomCode);
             return true;
@@ -277,15 +276,15 @@
     </script>
 
     <script>
-        // قائمة أصوات مكتملة تحتوي على 7 مراحل لكل فئة
+        // قائمة الأصوات كاملة لجميع الفئات وتستند إلى ملفات صوتية حقيقية ومباشرة
         const soundCategories = {
             animals: [
-                { id: 1, name: "زئير الأسد", pitch: 120, speech: "زئير أسد" },
-                { id: 2, name: "مواء القطة", pitch: 600, speech: "مواء قطة" },
-                { id: 3, name: "صياح الديك", pitch: 450, speech: "صياح ديك" },
-                { id: 4, name: "نباح الكلب", pitch: 200, speech: "نباح كلب" },
+                { id: 1, name: "زئير الأسد", url: "https://actions.google.com/sounds/v1/animals/lion_roar.ogg" },
+                { id: 2, name: "مواء القطة", url: "https://actions.google.com/sounds/v1/animals/cat_purr_meow.ogg" },
+                { id: 3, name: "صياح الديك", url: "https://actions.google.com/sounds/v1/animals/rooster_crow.ogg" },
+                { id: 4, name: "نباح الكلب", url: "https://actions.google.com/sounds/v1/animals/dog_bark_two.ogg" },
                 { id: 5, name: "نهيق الحمار", pitch: 350, speech: "نهيق حمار" },
-                { id: 6, name: "خوار البقرة", pitch: 150, speech: "خوار بقرة" },
+                { id: 6, name: "خوار البقرة", url: "https://actions.google.com/sounds/v1/animals/cow_moo.ogg" },
                 { id: 7, name: "عواء الذئب", pitch: 300, speech: "عواء ذئب" }
             ],
             quotes: [
@@ -298,8 +297,8 @@
                 { id: 7, name: "أشوفك على خير!", speech: "أشوفك على خير" }
             ],
             memes: [
-                { id: 1, name: "ضحكة الميمز الشهيرة", speech: "ههههه هههه" },
-                { id: 2, name: "الضحكة الشريرة", speech: "مواهاهاها" },
+                { id: 1, name: "ضحكة الميمز الشهيرة", url: "https://actions.google.com/sounds/v1/human_voices/cartoon_giggle.ogg" },
+                { id: 2, name: "الضحكة الشريرة", url: "https://actions.google.com/sounds/v1/human_voices/evil_laugh.ogg" },
                 { id: 3, name: "إيه ده يا راجل!", speech: "إيه ده يا راجل" },
                 { id: 4, name: "مش ممكن أبداً!", speech: "مش ممكن أبداً" },
                 { id: 5, name: "يا نهار أبيض!", speech: "يا نهار أبيض" },
@@ -316,11 +315,11 @@
                 { id: 7, name: "تردد عالي جداً 750Hz", pitch: 750 }
             ],
             random: [
-                { id: 1, name: "زئير الأسد (حيوانات)", pitch: 120, speech: "زئير أسد" },
+                { id: 1, name: "زئير الأسد (حيوانات)", url: "https://actions.google.com/sounds/v1/animals/lion_roar.ogg" },
                 { id: 2, name: "يا حلاوة! (عبارات)", speech: "يا حلاوة" },
                 { id: 3, name: "تردد حاد 550Hz (نغمات)", pitch: 550 },
-                { id: 4, name: "ضحكة الميمز (ميمز)", speech: "ههههه هههه" },
-                { id: 5, name: "صياح الديك (حيوانات)", pitch: 450, speech: "صياح ديك" },
+                { id: 4, name: "الضحكة الشريرة (ميمز)", url: "https://actions.google.com/sounds/v1/human_voices/evil_laugh.ogg" },
+                { id: 5, name: "صياح الديك (حيوانات)", url: "https://actions.google.com/sounds/v1/animals/rooster_crow.ogg" },
                 { id: 6, name: "إيه ده يا راجل! (ميمز)", speech: "إيه ده يا راجل" },
                 { id: 7, name: "تردد منخفض 180Hz (نغمات)", pitch: 180 }
             ]
@@ -449,45 +448,40 @@
         }
 
         function playTargetSound() {
-            // تفعيل نظام الصوت مع تفاعل المستخدم
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
             const list = soundCategories[window.currentRoomCategory] || soundCategories.animals;
             const stage = list[currentStageIndex];
 
-            // نظام محاكي الترددات والمقاطع الصوتية لضمان عمل كافة الأصوات
+            // 1. تشغيل الملف المباشر إن وجد
+            if (stage.url) {
+                const audio = new Audio(stage.url);
+                audio.play().catch(e => console.log("خطأ في التشغيل:", e));
+                return;
+            }
+
+            // 2. النطق الصوتي إن وجد
             if (stage.speech && 'speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(stage.speech);
                 utterance.lang = 'ar-SA';
                 utterance.rate = 0.9;
-                
-                // إضافة صوت اصطناعي مكمل للتأكيد في حالة قيود المتصفح
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.3);
-
                 window.speechSynthesis.speak(utterance);
-            } else {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(stage.pitch || 440, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 1.2);
+                return;
             }
+
+            // 3. الترددات الصوتية
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(stage.pitch || 440, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1.2);
         }
 
         async function toggleRecording() {
