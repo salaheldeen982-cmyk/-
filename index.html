@@ -202,6 +202,38 @@
             object-fit: cover;
             border: 2px solid var(--accent-color);
         }
+
+        /* أنماط الميزات الجديدة: الغرف المفتوحة ونظام الأصدقاء */
+        .room-type-selector {
+            display: flex; gap: 10px; margin-bottom: 15px; justify-content: center;
+        }
+        .room-type-btn {
+            flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.2); color: var(--text-color); cursor: pointer; font-weight: bold;
+        }
+        .room-type-btn.active {
+            background: var(--accent-color); border-color: var(--accent-color);
+        }
+        .open-rooms-list, .friends-list {
+            max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin: 15px 0;
+        }
+        .room-card {
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; border: 1px solid var(--border-color);
+        }
+        .add-friend-btn {
+            background: #10b981; border: none; color: white; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold;
+        }
+        .device-id-badge {
+            font-size: 0.75rem; color: var(--gold); background: rgba(245, 158, 11, 0.1); padding: 4px 8px; border-radius: 6px; margin-top: 4px; display: inline-block; cursor: pointer;
+        }
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7);
+            z-index: 2000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: var(--card-bg); padding: 20px; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid var(--border-color); text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -212,6 +244,7 @@
             <span>سرحان بارتي</span>
         </div>
         <div class="settings-btns">
+            <button class="icon-btn" onclick="openFriendsModal()"><i class="fa-solid fa-user-group"></i> <span data-key="btn_friends">الأصدقاء</span></button>
             <button class="icon-btn" onclick="toggleLanguage()"><i class="fa-solid fa-globe"></i> <span id="lang-btn-text">EN</span></button>
             <button class="icon-btn" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i></button>
         </div>
@@ -238,13 +271,14 @@
             <button class="btn-primary" onclick="saveLoginAndGoToLobby()" data-key="btn_continue">دخول اللعبة</button>
         </div>
 
-        <!-- Screen 2: Room Selection -->
+        <!-- Screen 2: Room Selection & Lobby -->
         <div id="screen-lobby" class="screen">
             <div class="user-profile-badge">
                 <img id="lobby-user-avatar" src="" alt="Avatar">
                 <div style="text-align: right; flex: 1;">
                     <div style="font-weight: 700; font-size: 1.1rem;" id="lobby-user-name">اسم اللاعب</div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary);" data-key="status_online">متصل الان</div>
+                    <div class="device-id-badge" id="lobby-device-id" onclick="copyDeviceId()" title="انقر لنسخ المعرف">ID: ----</div>
                 </div>
                 <button class="icon-btn" onclick="editProfile()" style="padding: 6px 10px;" title="تعديل الحساب">
                     <i class="fa-solid fa-pen-to-square"></i>
@@ -252,9 +286,16 @@
             </div>
 
             <h2 data-key="lobby_title">صالة الانتظار</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 20px;" data-key="lobby_desc">أنشئ غرفة جديدة أو انضم لغرفة موجودة</p>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;" data-key="lobby_desc">أنشئ غرفة جديدة أو انضم لغرفة موجودة</p>
 
-            <button class="btn-primary" id="btn-create-room" style="margin-bottom: 20px;" onclick="createRoom()" data-key="btn_create_room">إنشاء غرفة جديدة</button>
+            <!-- خيارات نوع الغرفة عند الإنشاء -->
+            <div class="room-type-selector">
+                <button class="room-type-btn active" id="type-public-btn" onclick="selectRoomType('public')">🌐 <span data-key="type_public">عامة</span></button>
+                <button class="room-type-btn" id="type-private-btn" onclick="selectRoomType('private')">🔒 <span data-key="type_private">خاصة بكلمة سر</span></button>
+            </div>
+
+            <button class="btn-primary" id="btn-create-room" style="margin-bottom: 10px;" onclick="createRoom()" data-key="btn_create_room">إنشاء غرفة جديدة</button>
+            <button class="btn-primary" style="background: #3b82f6; margin-bottom: 20px;" onclick="showOpenRoomsScreen()" data-key="btn_open_rooms">🌐 الغرف المفتوحة</button>
             
             <div class="form-group">
                 <input type="text" id="room-code-input" placeholder="أدخل رقم الغرفة" style="text-align: center; font-size: 1.2rem;">
@@ -262,11 +303,20 @@
             <button class="btn-primary" id="btn-join-room" style="background: transparent; border: 2px solid var(--accent-color);" onclick="joinRoom()" data-key="btn_join_room">الانضمام للغرفة</button>
         </div>
 
+        <!-- Screen 2.5: Open Rooms List -->
+        <div id="screen-open-rooms" class="screen">
+            <h2>🌐 <span data-key="open_rooms_title">الغرف المفتوحة المتاحة</span></h2>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;" data-key="open_rooms_desc">اختر غرفة وانضم فوراً للاعبين</p>
+            <div class="open-rooms-list" id="open-rooms-container"></div>
+            <button class="btn-primary" onclick="showScreen('screen-lobby')" data-key="btn_back">رجوع</button>
+        </div>
+
         <!-- Screen 3: Game Lobby Room -->
         <div id="screen-room" class="screen">
             <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
                 <span data-key="room_code_label">رقم الغرفة:</span>
                 <div style="font-size: 1.5rem; letter-spacing: 4px; font-weight: 900; color: var(--accent-color);" id="display-room-code">----</div>
+                <div id="room-privacy-type" style="font-size: 0.8rem; color: var(--gold); margin-top: 4px;"></div>
             </div>
             <h3><span data-key="players_label">اللاعبون المتواجدون</span> (<span id="player-count">0</span>/8)</h3>
             <div id="players-list" style="display: flex; flex-direction: column; gap: 10px; margin: 20px 0;"></div>
@@ -344,6 +394,32 @@
         </div>
     </div>
 
+    <!-- Modal: Friends List & Private Chat -->
+    <div class="modal" id="friends-modal">
+        <div class="modal-content">
+            <h3 style="color: var(--accent-color); margin-bottom: 10px;"><i class="fa-solid fa-user-group"></i> <span data-key="friends_title">قائمة الأصدقاء</span></h3>
+            <div class="form-group">
+                <input type="text" id="add-friend-id-input" placeholder="أدخل ID صديقك هنا..." style="font-size: 0.85rem;">
+                <button class="btn-primary" style="padding: 8px; margin-top: 5px; font-size: 0.9rem;" onclick="addFriendByInputId()" data-key="btn_add_friend">إضافة صديق</button>
+            </div>
+            <div class="friends-list" id="friends-list-container"></div>
+            
+            <!-- Friend Private Chat Box -->
+            <div id="private-chat-section" style="display: none; border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px;">
+                <div style="font-weight: bold; margin-bottom: 5px;" id="private-chat-friend-name">محادثة مع: </div>
+                <div class="chat-messages" id="private-chat-messages" style="height: 100px;"></div>
+                <div class="chat-input-group">
+                    <button class="sticker-btn" onclick="togglePrivateStickerDrawer()"><i class="fa-solid fa-face-smile"></i></button>
+                    <input type="text" id="private-chat-input" placeholder="رسالة خاصة..." onkeypress="if(event.key === 'Enter') sendPrivateChatMessage()">
+                    <button class="chat-send-btn" onclick="sendPrivateChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+                <div class="sticker-drawer" id="private-sticker-drawer"></div>
+            </div>
+
+            <button class="btn-primary" style="background: #ef4444; margin-top: 15px;" onclick="closeFriendsModal()" data-key="btn_close">إغلاق</button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -366,7 +442,15 @@
         let userUID = null;
         signInAnonymously(auth).then((res) => { userUID = res.user.uid; });
 
-        window.createRoomInFirebase = async function(roomCode, playerData) {
+        // توليد وترسيخ Device ID خاص بكل جهاز
+        let deviceId = localStorage.getItem('sarhan_party_device_id');
+        if(!deviceId) {
+            deviceId = "DEV-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+            localStorage.setItem('sarhan_party_device_id', deviceId);
+        }
+        window.myDeviceId = deviceId;
+
+        window.createRoomInFirebase = async function(roomCode, playerData, isPublic = true) {
             const uid = userUID || "user_" + Math.random().toString(36).substr(2, 9);
             window.myUID = uid;
             window.isHost = true;
@@ -380,15 +464,15 @@
                 stageState: "recording",
                 selectedSoundIndices: shuffledIndices,
                 createdAt: Date.now(),
-                hostUid: uid
+                hostUid: uid,
+                isPublic: isPublic
             });
             
+            playerData.deviceId = window.myDeviceId;
             const playerRef = ref(database, `rooms/${roomCode}/players/${uid}`);
             await set(playerRef, playerData);
             
-            // عند انقطاع اتصال صاحب الغرفة، يتم تدمير الغرفة بالكامل تلقائياً
             onDisconnect(roomRef).remove();
-            
             listenToRoom(roomCode);
         };
 
@@ -410,12 +494,30 @@
                 return false;
             }
             
+            playerData.deviceId = window.myDeviceId;
             const pRef = ref(database, `rooms/${roomCode}/players/${uid}`);
             await set(pRef, playerData);
             onDisconnect(pRef).remove();
 
             listenToRoom(roomCode);
             return true;
+        };
+
+        window.fetchOpenRooms = function(callback) {
+            onValue(ref(database, 'rooms'), (snapshot) => {
+                const data = snapshot.val();
+                const openRooms = [];
+                if(data) {
+                    Object.keys(data).forEach(code => {
+                        const r = data[code];
+                        if(r.isPublic && r.status === 'waiting') {
+                            const pCount = r.players ? Object.keys(r.players).length : 0;
+                            openRooms.push({ code, count: pCount });
+                        }
+                    });
+                }
+                callback(openRooms);
+            });
         };
 
         window.sendChatToFirebase = function(roomCode, senderName, text, stickerEmoji = null) {
@@ -462,11 +564,31 @@
             });
         };
 
+        // Firebase Private Friend Chat
+        window.sendPrivateChat = function(friendDeviceId, text, sticker = null) {
+            const chatId = [window.myDeviceId, friendDeviceId].sort().join("_");
+            const chatRef = ref(database, `private_chats/${chatId}`);
+            push(chatRef, {
+                sender: window.myDeviceId,
+                senderName: window.username,
+                message: text ? text.trim() : '',
+                sticker: sticker,
+                time: Date.now()
+            });
+        };
+
+        window.listenToPrivateChat = function(friendDeviceId, callback) {
+            const chatId = [window.myDeviceId, friendDeviceId].sort().join("_");
+            onValue(ref(database, `private_chats/${chatId}`), (snapshot) => {
+                const data = snapshot.val();
+                callback(data ? Object.values(data) : []);
+            });
+        };
+
         function listenToRoom(roomCode) {
             onValue(ref(database, `rooms/${roomCode}`), (snapshot) => {
                 const roomData = snapshot.val();
                 
-                // إذا تم إغلاق/حذف الغرفة من قبل صاحبها، عُد بجميع الأعضاء فوراً لصالة الانتظار
                 if (!roomData) {
                     alert(window.currentLang === 'ar' ? "لقد خرج صاحب الغرفة، تم إغلاق الغرفة والعودة للروضة!" : "Host left! Room closed, returning to lobby.");
                     window.location.reload();
@@ -480,7 +602,6 @@
                 if (roomData.players) {
                     const playersArr = Object.values(roomData.players);
                     
-                    // التحقق مما إذا كان صاحب الغرفة ما زال موجوداً
                     const hostExists = playersArr.some(p => p.host === true);
                     if (!hostExists) {
                         alert(window.currentLang === 'ar' ? "لقد غادر صاحب الغرفة، تم إغلاق الغرفة!" : "Host has left, closing room!");
@@ -572,7 +693,17 @@
                 done_stage_audio: "✅ اكتملت جميع الأصوات للمرحلة الحالية!",
                 match_score: "نسبة تطابق الصوت",
                 status_online: "متصل الآن",
-                no_sound_txt: "NO SOUND (لم يتم كشف صوت)"
+                no_sound_txt: "NO SOUND (لم يتم كشف صوت)",
+                type_public: "عامة",
+                type_private: "خاصة بكلمة سر",
+                btn_open_rooms: "🌐 الغرف المفتوحة",
+                open_rooms_title: "الغرف المفتوحة المتاحة",
+                open_rooms_desc: "اختر غرفة وانضم فوراً للاعبين",
+                btn_friends: "الأصدقاء",
+                friends_title: "قائمة الأصدقاء",
+                btn_add_friend: "إضافة صديق",
+                btn_back: "رجوع",
+                btn_close: "إغلاق"
             },
             en: {
                 welcome: "Login",
@@ -611,13 +742,22 @@
                 done_stage_audio: "✅ All recordings played for this stage!",
                 match_score: "Voice Match Score",
                 status_online: "Online Now",
-                no_sound_txt: "NO SOUND (No Audio Detected)"
+                no_sound_txt: "NO SOUND (No Audio Detected)",
+                type_public: "Public",
+                type_private: "Private (Passcode)",
+                btn_open_rooms: "🌐 Open Rooms",
+                open_rooms_title: "Available Open Rooms",
+                open_rooms_desc: "Pick a room and join players directly",
+                btn_friends: "Friends",
+                friends_title: "Friends List",
+                btn_add_friend: "Add Friend",
+                btn_back: "Back",
+                btn_close: "Close"
             }
         };
 
         window.currentLang = 'ar';
 
-        // 12 استيكر تفاعلي عالي الجودة مضمون العمل 100%
         const animatedStickers = [
             "🔥", "😂", "🎉", "👏", "👑", "🗿", "😎", "🚀", "❤️", "😱", "👍", "🏆"
         ];
@@ -664,6 +804,8 @@
         let currentStageIndex = 0;
         let currentAudioObject = null;
         let isJoiningOrCreating = false;
+        let selectedRoomType = 'public';
+        let currentActiveFriendId = null;
         window.myTotalScore = 0;
 
         window.onload = () => {
@@ -681,6 +823,7 @@
             const savedAvatar = localStorage.getItem('sarhan_party_avatar');
             if (savedName && savedAvatar) {
                 username = savedName;
+                window.username = savedName;
                 selectedAvatar = savedAvatar;
                 updateLobbyProfile();
                 showScreen('screen-lobby');
@@ -690,23 +833,45 @@
             updatePageLanguage();
         };
 
+        function selectRoomType(type) {
+            selectedRoomType = type;
+            document.getElementById('type-public-btn').classList.toggle('active', type === 'public');
+            document.getElementById('type-private-btn').classList.toggle('active', type === 'private');
+        }
+
+        function copyDeviceId() {
+            navigator.clipboard.writeText(window.myDeviceId);
+            alert(window.currentLang === 'ar' ? "تم نسخ الـ ID الخاص بك!" : "Device ID copied!");
+        }
+
         function initStickerDrawer() {
             const drawer = document.getElementById('sticker-drawer');
+            const privateDrawer = document.getElementById('private-sticker-drawer');
             drawer.innerHTML = '';
+            privateDrawer.innerHTML = '';
             animatedStickers.forEach(emoji => {
                 drawer.innerHTML += `<div class="sticker-item" onclick="sendSticker('${emoji}')">${emoji}</div>`;
+                privateDrawer.innerHTML += `<div class="sticker-item" onclick="sendPrivateSticker('${emoji}')">${emoji}</div>`;
             });
         }
 
         function toggleStickerDrawer() {
-            const drawer = document.getElementById('sticker-drawer');
-            drawer.classList.toggle('open');
+            document.getElementById('sticker-drawer').classList.toggle('open');
+        }
+        function togglePrivateStickerDrawer() {
+            document.getElementById('private-sticker-drawer').classList.toggle('open');
         }
 
         function sendSticker(emoji) {
             if(currentRoom) {
                 window.sendChatToFirebase(currentRoom, username, '', emoji);
                 document.getElementById('sticker-drawer').classList.remove('open');
+            }
+        }
+        function sendPrivateSticker(emoji) {
+            if(currentActiveFriendId) {
+                window.sendPrivateChat(currentActiveFriendId, '', emoji);
+                document.getElementById('private-sticker-drawer').classList.remove('open');
             }
         }
 
@@ -752,7 +917,7 @@
             document.getElementById(id).classList.add('active');
 
             const chatBox = document.getElementById('global-chat-box');
-            if(id !== 'screen-login' && id !== 'screen-lobby') {
+            if(id !== 'screen-login' && id !== 'screen-lobby' && id !== 'screen-open-rooms') {
                 chatBox.style.display = 'block';
             } else {
                 chatBox.style.display = 'none';
@@ -762,6 +927,7 @@
         function updateLobbyProfile() {
             document.getElementById('lobby-user-name').innerText = username;
             document.getElementById('lobby-user-avatar').src = selectedAvatar;
+            document.getElementById('lobby-device-id').innerText = "ID: " + window.myDeviceId;
         }
 
         function saveLoginAndGoToLobby() {
@@ -769,6 +935,7 @@
             if(!username) return alert(window.currentLang === 'ar' ? "يرجى إدخال اسمك!" : "Please enter your name!");
             if(username.length > 15) return alert(window.currentLang === 'ar' ? "يجب ألا يتجاوز اسم اللاعب 15 حرفاً!" : "Name max 15 chars!");
             
+            window.username = username;
             localStorage.setItem('sarhan_party_username', username);
             localStorage.setItem('sarhan_party_avatar', selectedAvatar);
 
@@ -786,12 +953,18 @@
             isJoiningOrCreating = true;
             document.getElementById('btn-create-room').disabled = true;
 
+            const isPublic = selectedRoomType === 'public';
             currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
+            
             document.getElementById('display-room-code').innerText = currentRoom;
+            document.getElementById('room-privacy-type').innerText = isPublic 
+                ? (window.currentLang==='ar' ? "🌐 غرفة عامة" : "🌐 Public Room") 
+                : (window.currentLang==='ar' ? "🔒 غرفة خاصة بكلمة سر الموقع" : "🔒 Private Room");
+
             document.getElementById('btn-start-game').style.display = 'block';
             document.getElementById('txt-waiting-host').style.display = 'none';
 
-            await window.createRoomInFirebase(currentRoom, { name: username, avatar: selectedAvatar, host: true, score: 0, submittedStage: -1 });
+            await window.createRoomInFirebase(currentRoom, { name: username, avatar: selectedAvatar, host: true, score: 0, submittedStage: -1 }, isPublic);
             showScreen('screen-room');
 
             isJoiningOrCreating = false;
@@ -820,6 +993,124 @@
 
             isJoiningOrCreating = false;
             document.getElementById('btn-join-room').disabled = false;
+        }
+
+        function showOpenRoomsScreen() {
+            showScreen('screen-open-rooms');
+            window.fetchOpenRooms((rooms) => {
+                const container = document.getElementById('open-rooms-container');
+                container.innerHTML = '';
+                if(rooms.length === 0) {
+                    container.innerHTML = `<div style="color:var(--text-secondary); margin-top:20px;">${window.currentLang==='ar'?'لا توجد غرف مفتوحة حالياً':'No open rooms currently'}</div>`;
+                    return;
+                }
+                rooms.forEach(r => {
+                    const isFull = r.count >= 8;
+                    container.innerHTML += `
+                        <div class="room-card">
+                            <div style="text-align:right;">
+                                <strong>غرفة: ${r.code}</strong>
+                                <div style="font-size:0.8rem; color:var(--text-secondary);">${r.count}/8 ${window.currentLang==='ar'?'لاعبين':'players'}</div>
+                            </div>
+                            <button class="add-friend-btn" style="background:${isFull?'#ef4444':'#10b981'};" ${isFull?'disabled':''} onclick="joinOpenRoomDirect('${r.code}')">
+                                ${isFull ? (window.currentLang==='ar'?'مكتملة':'Full') : (window.currentLang==='ar'?'دخول':'Join')}
+                            </button>
+                        </div>`;
+                });
+            });
+        }
+
+        function joinOpenRoomDirect(code) {
+            document.getElementById('room-code-input').value = code;
+            joinRoom();
+        }
+
+        // Friends System Logic
+        function getMyFriends() {
+            return JSON.parse(localStorage.getItem('sarhan_party_friends') || '[]');
+        }
+
+        function saveFriend(friendObj) {
+            const friends = getMyFriends();
+            if(!friends.some(f => f.id === friendObj.id)) {
+                friends.push(friendObj);
+                localStorage.setItem('sarhan_party_friends', JSON.stringify(friends));
+            }
+        }
+
+        function addFriendByInputId() {
+            const input = document.getElementById('add-friend-id-input');
+            const targetId = input.value.trim().toUpperCase();
+            if(!targetId) return;
+            if(targetId === window.myDeviceId) {
+                alert(window.currentLang === 'ar' ? "لا يمكنك إضافة نفسك!" : "You cannot add yourself!");
+                return;
+            }
+            saveFriend({ id: targetId, name: "صديق " + targetId });
+            input.value = '';
+            renderFriendsList();
+            alert(window.currentLang === 'ar' ? "تمت إضافة الصديق!" : "Friend added!");
+        }
+
+        function addFriendFromRoom(friendDeviceId, friendName) {
+            if(friendDeviceId === window.myDeviceId) return;
+            saveFriend({ id: friendDeviceId, name: friendName });
+            alert((window.currentLang === 'ar' ? "تمت إضافة " : "Added ") + friendName);
+        }
+
+        function openFriendsModal() {
+            document.getElementById('friends-modal').style.display = 'flex';
+            renderFriendsList();
+        }
+        function closeFriendsModal() {
+            document.getElementById('friends-modal').style.display = 'none';
+        }
+
+        function renderFriendsList() {
+            const container = document.getElementById('friends-list-container');
+            container.innerHTML = '';
+            const friends = getMyFriends();
+            if(friends.length === 0) {
+                container.innerHTML = `<div style="font-size:0.85rem; color:var(--text-secondary);">${window.currentLang==='ar'?'لا يوجد أصدقاء مضافون':'No friends added yet'}</div>`;
+                return;
+            }
+            friends.forEach(f => {
+                container.innerHTML += `
+                    <div class="room-card">
+                        <div style="text-align:right;">
+                            <strong>${f.name}</strong>
+                            <div style="font-size:0.75rem; color:var(--gold);">${f.id}</div>
+                        </div>
+                        <button class="add-friend-btn" onclick="openPrivateChatWith('${f.id}', '${f.name}')">💬 شات</button>
+                    </div>`;
+            });
+        }
+
+        function openPrivateChatWith(friendId, friendName) {
+            currentActiveFriendId = friendId;
+            document.getElementById('private-chat-section').style.display = 'block';
+            document.getElementById('private-chat-friend-name').innerText = (window.currentLang==='ar'?'محادثة مع: ':'Chat with: ') + friendName;
+            
+            window.listenToPrivateChat(friendId, (messages) => {
+                const container = document.getElementById('private-chat-messages');
+                container.innerHTML = '';
+                messages.forEach(msg => {
+                    if (msg.sticker) {
+                        container.innerHTML += `<div class="chat-msg"><strong>${msg.senderName}:</strong> <span class="chat-msg-sticker">${msg.sticker}</span></div>`;
+                    } else {
+                        container.innerHTML += `<div class="chat-msg"><strong>${msg.senderName}:</strong> ${msg.message}</div>`;
+                    }
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        function sendPrivateChatMessage() {
+            const input = document.getElementById('private-chat-input');
+            if(input.value.trim() && currentActiveFriendId) {
+                window.sendPrivateChat(currentActiveFriendId, input.value.trim());
+                input.value = '';
+            }
         }
 
         function sendChatMessage() {
@@ -851,10 +1142,15 @@
             const t = translations[window.currentLang];
 
             playersList.forEach(p => {
+                const isMe = p.deviceId === window.myDeviceId;
                 list.innerHTML += `
                     <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.05); padding:10px; border-radius:12px;">
                         <img src="${p.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
-                        <span style="font-weight:700; flex:1; text-align:inherit;">${p.name}</span>
+                        <div style="flex:1; text-align:inherit;">
+                            <div style="font-weight:700;">${p.name}</div>
+                            ${p.deviceId ? `<div style="font-size:0.7rem; color:var(--gold);">${p.deviceId}</div>` : ''}
+                        </div>
+                        ${!isMe && p.deviceId ? `<button class="add-friend-btn" onclick="addFriendFromRoom('${p.deviceId}', '${p.name}')">+ صديق</button>` : ''}
                         ${p.host ? `<span style="font-size:0.75rem; background:var(--accent-color); padding:2px 8px; border-radius:6px;">${t.host_tag}</span>` : ''}
                     </div>`;
             });
@@ -913,7 +1209,6 @@
             }
         }
 
-        // تحليل ذكي حقيقي للبصمة الصوتية والمطابقة مع الصوت المستهدف
         async function analyzeAndMatchAudio(recordedBlob) {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -931,12 +1226,10 @@
 
                 audioCtx.close();
 
-                // شرط اكتشاف الصمت أو عدم وجود صوت نهائياً (NO SOUND)
                 if (recFeatures.rmsVolume < 0.015) {
                     return { isNoSound: true, score: 0 };
                 }
 
-                // حساب النسبة بدقة الذكاء الاصطناعي بناء على الحجم، والتردد، والنمط الصوتي
                 const volumeDiff = Math.abs(recFeatures.rmsVolume - targetFeatures.rmsVolume);
                 const pitchDiff = Math.abs(recFeatures.zeroCrossRate - targetFeatures.zeroCrossRate);
                 const energyDiff = Math.abs(recFeatures.energy - targetFeatures.energy);
@@ -984,7 +1277,6 @@
                 mediaRecorder.onstop = async () => {
                     const blob = new Blob(chunks, { type: 'audio/webm' });
                     
-                    // تحليل مطابقة الصوت
                     const analysis = await analyzeAndMatchAudio(blob);
                     
                     const reader = new FileReader();
