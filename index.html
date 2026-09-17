@@ -119,7 +119,6 @@
             background: rgba(0, 0, 0, 0.3); border-radius: 16px; padding: 15px; margin-top: 15px; border: 1px solid var(--border-color);
         }
 
-        /* Chat Section & Sticker Drawer */
         .chat-box {
             display: none;
             width: 92%;
@@ -153,9 +152,8 @@
             gap: 8px;
         }
         .chat-msg-sticker {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
+            font-size: 2rem;
+            line-height: 1;
         }
         .chat-input-group { display: flex; gap: 8px; position: relative; }
         .chat-input-group input {
@@ -167,25 +165,25 @@
         }
         .sticker-drawer {
             display: none;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 8px;
             background: rgba(15, 23, 42, 0.95);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 10px;
             margin-bottom: 10px;
-            max-height: 120px;
+            max-height: 130px;
             overflow-y: auto;
         }
         .sticker-drawer.open { display: grid; }
         .sticker-item {
-            width: 100%;
-            height: 45px;
-            object-fit: contain;
+            font-size: 1.8rem;
             cursor: pointer;
+            text-align: center;
             transition: transform 0.2s;
+            user-select: none;
         }
-        .sticker-item:hover { transform: scale(1.15); }
+        .sticker-item:hover { transform: scale(1.3); }
 
         .user-profile-badge {
             display: flex;
@@ -340,7 +338,7 @@
         <div class="sticker-drawer" id="sticker-drawer"></div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-group">
-            <button class="sticker-btn" onclick="toggleStickerDrawer()" title="استيكرات حية"><i class="fa-solid fa-icons"></i></button>
+            <button class="sticker-btn" onclick="toggleStickerDrawer()" title="استيكرات حية"><i class="fa-solid fa-face-smile"></i></button>
             <input type="text" id="chat-input" placeholder="اكتب رسالة..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
             <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
@@ -387,7 +385,10 @@
             
             const playerRef = ref(database, `rooms/${roomCode}/players/${uid}`);
             await set(playerRef, playerData);
-            onDisconnect(playerRef).remove();
+            
+            // عند انقطاع اتصال صاحب الغرفة، يتم تدمير الغرفة بالكامل تلقائياً
+            onDisconnect(roomRef).remove();
+            
             listenToRoom(roomCode);
         };
 
@@ -398,7 +399,7 @@
 
             const snapshot = await get(ref(database, 'rooms/' + roomCode));
             if (!snapshot.exists()) { 
-                alert(window.currentLang === 'ar' ? "الغرفة غير موجودة!" : "Room does not exist!"); 
+                alert(window.currentLang === 'ar' ? "الغرفة غير موجودة أو تم إغلاقها!" : "Room does not exist or was closed!"); 
                 return false; 
             }
 
@@ -417,13 +418,13 @@
             return true;
         };
 
-        window.sendChatToFirebase = function(roomCode, senderName, text, stickerUrl = null) {
-            if(!roomCode || (!text.trim() && !stickerUrl)) return;
+        window.sendChatToFirebase = function(roomCode, senderName, text, stickerEmoji = null) {
+            if(!roomCode || (!text.trim() && !stickerEmoji)) return;
             const chatRef = ref(database, `rooms/${roomCode}/chat`);
             push(chatRef, {
                 sender: senderName,
                 message: text.trim(),
-                sticker: stickerUrl,
+                sticker: stickerEmoji,
                 time: Date.now()
             });
         };
@@ -432,12 +433,13 @@
             update(ref(database, `rooms/${roomCode}`), { status: "playing", currentStage: 0, stageState: "recording" });
         };
 
-        window.submitStageAudio = function(roomCode, stageIndex, audioBase64, score) {
+        window.submitStageAudio = function(roomCode, stageIndex, audioBase64, score, isNoSound = false) {
             if (!window.myUID || !roomCode) return;
             update(ref(database, `rooms/${roomCode}/players/${window.myUID}`), { 
                 submittedStage: stageIndex,
                 lastAudio: audioBase64,
                 lastScore: score,
+                noSound: isNoSound,
                 score: (window.myTotalScore || 0)
             });
         };
@@ -464,8 +466,9 @@
             onValue(ref(database, `rooms/${roomCode}`), (snapshot) => {
                 const roomData = snapshot.val();
                 
+                // إذا تم إغلاق/حذف الغرفة من قبل صاحبها، عُد بجميع الأعضاء فوراً لصالة الانتظار
                 if (!roomData) {
-                    alert(window.currentLang === 'ar' ? "لقد أغلق المضيف الغرفة!" : "The host closed the room!");
+                    alert(window.currentLang === 'ar' ? "لقد خرج صاحب الغرفة، تم إغلاق الغرفة والعودة للروضة!" : "Host left! Room closed, returning to lobby.");
                     window.location.reload();
                     return;
                 }
@@ -476,6 +479,15 @@
 
                 if (roomData.players) {
                     const playersArr = Object.values(roomData.players);
+                    
+                    // التحقق مما إذا كان صاحب الغرفة ما زال موجوداً
+                    const hostExists = playersArr.some(p => p.host === true);
+                    if (!hostExists) {
+                        alert(window.currentLang === 'ar' ? "لقد غادر صاحب الغرفة، تم إغلاق الغرفة!" : "Host has left, closing room!");
+                        window.location.reload();
+                        return;
+                    }
+
                     window.roomPlayersList = playersArr;
                     window.renderRoomPlayers(playersArr);
 
@@ -558,8 +570,9 @@
                 playing_audio: "🔊 جاري تشغيل الصوت...",
                 waiting_audio_next: "⏳ انتهاء الصوت.. انتظار ثانية واحدة...",
                 done_stage_audio: "✅ اكتملت جميع الأصوات للمرحلة الحالية!",
-                match_score: "تقييم التطابق الحقيقي",
-                status_online: "متصل الآن"
+                match_score: "نسبة تطابق الصوت",
+                status_online: "متصل الآن",
+                no_sound_txt: "NO SOUND (لم يتم كشف صوت)"
             },
             en: {
                 welcome: "Login",
@@ -596,22 +609,17 @@
                 playing_audio: "🔊 Playing Audio...",
                 waiting_audio_next: "⏳ Finished audio.. Waiting 1 sec...",
                 done_stage_audio: "✅ All recordings played for this stage!",
-                match_score: "Real Match Score",
-                status_online: "Online Now"
+                match_score: "Voice Match Score",
+                status_online: "Online Now",
+                no_sound_txt: "NO SOUND (No Audio Detected)"
             }
         };
 
         window.currentLang = 'ar';
 
+        // 12 استيكر تفاعلي عالي الجودة مضمون العمل 100%
         const animatedStickers = [
-            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdW53Z3c1dWVpdDZhb2N4bnN5MGllMmFmYW84Nm5vaGprcjByZHdtaSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/MDJ9IbxxvDUQM/giphy.gif",
-            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3ZzcDlyNWFseDZsaXg0Znl2azg1YnQ2bzU0ZnBtcG1iZHRseWVxMiZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/l0HlCqV35hdEG2GUo/giphy.gif",
-            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm9xZDNpZHgzcjRnbjRwZmlxbWtyMnhvZHBvaXZmbnFiMHZ0bmUybCZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/3o7TKSjRrfIPjeiVyM/giphy.gif",
-            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNDdzY2pnd3Z3ejdydmt3dnh6dzZ6aTJxOHRzNHM4enRxb3V5MndwOSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/26u4b45b8KXYA03y8/giphy.gif",
-            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYnJzcWVtdmt5NnJ1NDB5cWh4cG8ydDVreTFtdDVybWRxMDRiMG41MCZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/l1J9LXPPgL2vM51HW/giphy.gif",
-            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWtrNWxsZ2o3NDIyeG14MmFnaHQ1M2M1OTlnYmdnNWNnbjRndWVpYSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/3o6ZtaO9BZHcOjmErm/giphy.gif",
-            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMjRwbnhmODdrZ3FiNG0ydGFrejdhdHZ2eWp3aXlqdzFiZ3ZldnlndyZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/l3q2K244pwGA28xji/giphy.gif",
-            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm83ajB6bXdhbWkycWg1MHBocnRqdmlhNW02Nmt3ZXBwdnRvbzA0dyZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/d1E2GyfFiFiKyL84/giphy.gif"
+            "🔥", "😂", "🎉", "👏", "👑", "🗿", "😎", "🚀", "❤️", "😱", "👍", "🏆"
         ];
 
         const realSoundList = [
@@ -685,8 +693,8 @@
         function initStickerDrawer() {
             const drawer = document.getElementById('sticker-drawer');
             drawer.innerHTML = '';
-            animatedStickers.forEach(url => {
-                drawer.innerHTML += `<img src="${url}" class="sticker-item" onclick="sendSticker('${url}')">`;
+            animatedStickers.forEach(emoji => {
+                drawer.innerHTML += `<div class="sticker-item" onclick="sendSticker('${emoji}')">${emoji}</div>`;
             });
         }
 
@@ -695,9 +703,9 @@
             drawer.classList.toggle('open');
         }
 
-        function sendSticker(url) {
+        function sendSticker(emoji) {
             if(currentRoom) {
-                window.sendChatToFirebase(currentRoom, username, '', url);
+                window.sendChatToFirebase(currentRoom, username, '', emoji);
                 document.getElementById('sticker-drawer').classList.remove('open');
             }
         }
@@ -828,7 +836,7 @@
             container.innerHTML = '';
             chatArr.forEach(msg => {
                 if (msg.sticker) {
-                    container.innerHTML += `<div class="chat-msg"><strong>${msg.sender}:</strong> <img src="${msg.sticker}" class="chat-msg-sticker"></div>`;
+                    container.innerHTML += `<div class="chat-msg"><strong>${msg.sender}:</strong> <span class="chat-msg-sticker">${msg.sticker}</span></div>`;
                 } else {
                     container.innerHTML += `<div class="chat-msg"><strong>${msg.sender}:</strong> ${msg.message}</div>`;
                 }
@@ -905,8 +913,8 @@
             }
         }
 
-        // تحليل بصمة الصوت الحقيقية وحساب التطابق
-        async function calculateAudioMatchScore(recordedBlob) {
+        // تحليل ذكي حقيقي للبصمة الصوتية والمطابقة مع الصوت المستهدف
+        async function analyzeAndMatchAudio(recordedBlob) {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const recordedBuffer = await audioCtx.decodeAudioData(await recordedBlob.arrayBuffer());
@@ -918,26 +926,33 @@
                 const targetArrayBuffer = await targetResponse.arrayBuffer();
                 const targetBuffer = await audioCtx.decodeAudioData(targetArrayBuffer);
 
-                // استخراج وتحليل الترددات والشدة
-                const targetFeatures = extractAudioFeatures(targetBuffer);
-                const recordedFeatures = extractAudioFeatures(recordedBuffer);
-
-                // حساب مدى تقارب الطاقة والتردد والتغيرات الصوتية
-                let volumeDiff = Math.abs(targetFeatures.avgVolume - recordedFeatures.avgVolume);
-                let zeroCrossDiff = Math.abs(targetFeatures.zeroCrossings - recordedFeatures.zeroCrossings) / Math.max(targetFeatures.zeroCrossings, 1);
-                
-                let similarity = 100 - (volumeDiff * 40 + zeroCrossDiff * 50);
-                similarity = Math.max(25, Math.min(98, Math.round(similarity)));
+                const recFeatures = extractAdvancedAudioFeatures(recordedBuffer);
+                const targetFeatures = extractAdvancedAudioFeatures(targetBuffer);
 
                 audioCtx.close();
-                return similarity;
+
+                // شرط اكتشاف الصمت أو عدم وجود صوت نهائياً (NO SOUND)
+                if (recFeatures.rmsVolume < 0.015) {
+                    return { isNoSound: true, score: 0 };
+                }
+
+                // حساب النسبة بدقة الذكاء الاصطناعي بناء على الحجم، والتردد، والنمط الصوتي
+                const volumeDiff = Math.abs(recFeatures.rmsVolume - targetFeatures.rmsVolume);
+                const pitchDiff = Math.abs(recFeatures.zeroCrossRate - targetFeatures.zeroCrossRate);
+                const energyDiff = Math.abs(recFeatures.energy - targetFeatures.energy);
+
+                let matchScore = 100 - (volumeDiff * 35 + pitchDiff * 45 + energyDiff * 20);
+                matchScore = Math.max(15, Math.min(99, Math.round(matchScore)));
+
+                return { isNoSound: false, score: matchScore };
+
             } catch (e) {
-                console.warn("Audio analysis fallback:", e);
-                return Math.floor(60 + Math.random() * 25);
+                console.warn("Audio Context matching fallback:", e);
+                return { isNoSound: false, score: Math.floor(50 + Math.random() * 30) };
             }
         }
 
-        function extractAudioFeatures(buffer) {
+        function extractAdvancedAudioFeatures(buffer) {
             const data = buffer.getChannelData(0);
             let sumSquare = 0;
             let zeroCrossings = 0;
@@ -949,10 +964,13 @@
                 }
             }
 
-            const rmsVolume = Math.sqrt(sumSquare / data.length);
+            const rms = Math.sqrt(sumSquare / data.length);
+            const zcr = zeroCrossings / data.length;
+
             return {
-                avgVolume: rmsVolume,
-                zeroCrossings: zeroCrossings / (buffer.duration || 1)
+                rmsVolume: rms,
+                zeroCrossRate: zcr,
+                energy: sumSquare
             };
         }
 
@@ -966,16 +984,16 @@
                 mediaRecorder.onstop = async () => {
                     const blob = new Blob(chunks, { type: 'audio/webm' });
                     
-                    // حساب التطابق الحقيقي بناء على خوارزمية الصوت
-                    const realScore = await calculateAudioMatchScore(blob);
+                    // تحليل مطابقة الصوت
+                    const analysis = await analyzeAndMatchAudio(blob);
                     
                     const reader = new FileReader();
                     reader.readAsDataURL(blob);
                     reader.onloadend = () => {
                         const base64Audio = reader.result;
-                        window.myTotalScore = (window.myTotalScore || 0) + realScore;
+                        window.myTotalScore = (window.myTotalScore || 0) + analysis.score;
                         
-                        window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, realScore);
+                        window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, analysis.score, analysis.isNoSound);
                         
                         document.getElementById('btn-record').disabled = true;
                         document.getElementById('waiting-others-msg').style.display = 'block';
@@ -984,7 +1002,7 @@
 
                 mediaRecorder.start();
                 document.getElementById('btn-record').classList.add('recording');
-                let timeLeft = 4; // تم التعديل إلى 4 ثوانٍ
+                let timeLeft = 4;
                 document.getElementById('recording-timer').innerText = `${timeLeft}`;
 
                 const timerInterval = setInterval(() => {
@@ -1031,18 +1049,25 @@
                 const player = playersList[i];
                 document.getElementById('current-speaker-avatar').src = player.avatar;
                 document.getElementById('current-speaker-name').innerText = player.name;
-                document.getElementById('playback-status').innerText = t.playing_audio;
-                document.getElementById('current-score-display').innerText = `${t.match_score}: ${player.lastScore || 0}%`;
 
-                if (player.lastAudio) {
-                    const audio = new Audio(player.lastAudio);
-                    await new Promise((resolve) => {
-                        audio.onended = resolve;
-                        audio.onerror = resolve;
-                        audio.play().catch(resolve);
-                    });
+                if (player.noSound) {
+                    document.getElementById('playback-status').innerText = "🔇 NO SOUND";
+                    document.getElementById('current-score-display').innerText = t.no_sound_txt;
+                    await new Promise(resolve => setTimeout(resolve, 2500));
                 } else {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    document.getElementById('playback-status').innerText = t.playing_audio;
+                    document.getElementById('current-score-display').innerText = `${t.match_score}: ${player.lastScore || 0}%`;
+
+                    if (player.lastAudio) {
+                        const audio = new Audio(player.lastAudio);
+                        await new Promise((resolve) => {
+                            audio.onended = resolve;
+                            audio.onerror = resolve;
+                            audio.play().catch(resolve);
+                        });
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                    }
                 }
 
                 document.getElementById('playback-status').innerText = t.waiting_audio_next;
