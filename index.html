@@ -260,6 +260,49 @@
             background-color: #ef4444;
             box-shadow: 0 0 6px #ef4444;
         }
+
+        /* شريط التواجد الحي للاعبين أثناء اللعب */
+        .in-game-players-bar {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 14px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            align-items: center;
+            scroll-behavior: smooth;
+        }
+        .in-game-players-bar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .in-game-players-bar::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 4px;
+        }
+        .active-player-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            white-space: nowrap;
+            border: 1px solid transparent;
+            font-weight: 600;
+        }
+        .active-player-chip.submitted {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.18);
+        }
+        .active-player-chip img {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
     </style>
 </head>
 <body>
@@ -358,6 +401,9 @@
 
         <!-- Screen 4: Voice Game Arena -->
         <div id="screen-game" class="screen">
+            <!-- شريط الأعضاء المتواجدين حالياً في اللعبة -->
+            <div id="game-active-players-bar" class="in-game-players-bar"></div>
+
             <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
                 <div style="font-size: 1.1rem; font-weight: 700; color: var(--gold);" id="stage-indicator">المرحلة 1 / 5</div>
                 <h3 id="stage-title">استمع للصوت وقم بتقليده!</h3>
@@ -385,6 +431,9 @@
 
         <!-- Screen 5: Listening Phase -->
         <div id="screen-listening" class="screen">
+            <!-- شريط الأعضاء المتواجدين حالياً في اللعبة -->
+            <div id="listening-active-players-bar" class="in-game-players-bar"></div>
+
             <div style="background: rgba(0, 0, 0, 0.25); border-radius: 16px; padding: 15px; margin-bottom: 15px;">
                 <h3 style="color: var(--accent-color);" data-key="listening_title">🎧 الاستماع لتسجيلات اللاعبين</h3>
                 <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;" data-key="listening_desc">يتم تشغيل الأصوات بالتوالي بفارق ثانية واحدة...</p>
@@ -672,6 +721,11 @@
                     window.roomPlayersList = playersArr;
                     window.renderRoomPlayers(playersArr);
 
+                    // تحديث شريط الأعضاء المتواجدين الحيين في شاشة اللعب والاستماع
+                    if (window.updateInGamePlayersBar) {
+                        window.updateInGamePlayersBar(playersArr, roomData.currentStage || 0);
+                    }
+
                     if (window.isHost && roomData.status === "playing" && roomData.stageState === "recording") {
                         const hostListeningBtn = document.getElementById('btn-host-start-listening');
                         if (hostListeningBtn) {
@@ -751,7 +805,7 @@
                 playing_audio: "🔊 جاري تشغيل الصوت...",
                 waiting_audio_next: "⏳ انتهاء الصوت.. انتظار ثانية واحدة...",
                 done_stage_audio: "✅ اكتملت جميع الأصوات للمرحلة الحالية!",
-                match_score: "نسبة تطابق الصوت بالذكاء الاصطناعي",
+                match_score: "نسبة تطابق الصوت المعيارية",
                 status_online: "متصل الآن",
                 no_sound_txt: "NO SOUND (لم يتم كشف صوت)",
                 type_public: "عامة",
@@ -800,7 +854,7 @@
                 playing_audio: "🔊 Playing Audio...",
                 waiting_audio_next: "⏳ Finished audio.. Waiting 1 sec...",
                 done_stage_audio: "✅ All recordings played for this stage!",
-                match_score: "AI Voice Match Score",
+                match_score: "Standard Audio Match Score",
                 status_online: "Online Now",
                 no_sound_txt: "NO SOUND (No Audio Detected)",
                 type_public: "Public",
@@ -1241,6 +1295,30 @@
             container.scrollTop = container.scrollHeight;
         };
 
+        // تحديث وتجهيز شريط الأعضاء المتواجدين حياً داخل أشرطة اللعب
+        window.updateInGamePlayersBar = function(playersArr, currentStage = 0) {
+            const containers = [
+                document.getElementById('game-active-players-bar'),
+                document.getElementById('listening-active-players-bar')
+            ];
+            
+            containers.forEach(container => {
+                if(!container) return;
+                container.innerHTML = `<div style="font-size:0.75rem; color:var(--gold); font-weight:bold; margin-left:6px; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-users"></i> المتواجدون:</div>`;
+                
+                playersArr.forEach(p => {
+                    const hasSubmitted = p.submittedStage === currentStage;
+                    container.innerHTML += `
+                        <div class="active-player-chip ${hasSubmitted ? 'submitted' : ''}">
+                            <span class="status-dot online" style="width:6px; height:6px;"></span>
+                            <img src="${p.avatar}">
+                            <span>${p.name}</span>
+                            ${hasSubmitted ? '<i class="fa-solid fa-check" style="color:#10b981; font-size:0.7rem; margin-right:2px;"></i>' : ''}
+                        </div>`;
+                });
+            });
+        };
+
         window.renderRoomPlayers = function(playersList) {
             document.getElementById('player-count').innerText = playersList.length;
             const list = document.getElementById('players-list');
@@ -1321,7 +1399,23 @@
             }
         }
 
-        // خوارزمية تحليل ومطابقة الصوت بالذكاء الاصطناعي بدقة عالية وتطابق واقعي
+        // قص الصمت في البداية والنهاية لضمان تطابق زمني دقيق للترددات
+        function trimAudioSilence(channelData, threshold = 0.012) {
+            let start = 0;
+            let end = channelData.length - 1;
+
+            while (start < channelData.length && Math.abs(channelData[start]) < threshold) {
+                start++;
+            }
+            while (end > start && Math.abs(channelData[end]) < threshold) {
+                end--;
+            }
+
+            if (start >= end) return channelData;
+            return channelData.subarray(start, end + 1);
+        }
+
+        // خوارزمية تحليل ومطابقة الصوت بالذكاء الاصطناعي ومعالجة الإشارات الصوتية القياسية (Acoustic Feature Comparison Engine)
         async function analyzeAndMatchAudio(recordedBlob) {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1334,34 +1428,112 @@
                 const targetArrayBuffer = await targetResponse.arrayBuffer();
                 const targetBuffer = await audioCtx.decodeAudioData(targetArrayBuffer);
 
-                const recFeatures = extractAdvancedAudioFeatures(recordedBuffer);
-                const targetFeatures = extractAdvancedAudioFeatures(targetBuffer);
+                const recRawData = recordedBuffer.getChannelData(0);
+                const recTrimmed = trimAudioSilence(recRawData);
 
-                audioCtx.close();
+                // فحص عدم وجود صوت أو انخفاض مستويات الطاقة
+                let totalEnergy = 0;
+                for (let i = 0; i < recTrimmed.length; i++) {
+                    totalEnergy += recTrimmed[i] * recTrimmed[i];
+                }
+                const rmsVolume = Math.sqrt(totalEnergy / (recTrimmed.length || 1));
 
-                // التحقق من وجود صوت حقيقي (عدم الصمت)
-                if (recFeatures.rmsVolume < 0.012) {
+                if (rmsVolume < 0.012 || recTrimmed.length < 1000) {
+                    audioCtx.close();
                     return { isNoSound: true, score: 0 };
                 }
 
-                // حساب الاختلاف والتقارب في البصمة الصوتية مع أوزان التردد
-                const volumeDiff = Math.abs(recFeatures.rmsVolume - targetFeatures.rmsVolume);
-                const pitchDiff = Math.abs(recFeatures.zeroCrossRate - targetFeatures.zeroCrossRate);
-                const spectralDiff = Math.abs(recFeatures.spectralCentroid - targetFeatures.spectralCentroid);
+                const targetRawData = targetBuffer.getChannelData(0);
+                const targetTrimmed = trimAudioSilence(targetRawData);
 
-                // حساب النسبة المئوية المباشرة للتطابق الدقيق بالذكاء الاصطناعي
-                let matchScore = 100 - (volumeDiff * 30 + pitchDiff * 35 + spectralDiff * 35);
-                matchScore = Math.max(12, Math.min(99, Math.round(matchScore)));
+                // تقسيم الصوت لـ 25 إطارًا زمنيًا متساويًا لمقارنة ديناميكية للترددات والشدة
+                const FRAMES = 25;
+                const recProfile = extractFramedAcousticFeatures(recTrimmed, FRAMES);
+                const targetProfile = extractFramedAcousticFeatures(targetTrimmed, FRAMES);
+
+                audioCtx.close();
+
+                // حساب متوسط الفروق المطلقة للخصائص الصوتية عبر الزمن
+                let totalRmsDiff = 0;
+                let totalZcrDiff = 0;
+                let totalPitchDiff = 0;
+
+                for (let f = 0; f < FRAMES; f++) {
+                    totalRmsDiff += Math.abs(recProfile.rms[f] - targetProfile.rms[f]);
+                    totalZcrDiff += Math.abs(recProfile.zcr[f] - targetProfile.zcr[f]);
+                    totalPitchDiff += Math.abs(recProfile.pitch[f] - targetProfile.pitch[f]);
+                }
+
+                const avgRmsDiff = totalRmsDiff / FRAMES;
+                const avgZcrDiff = totalZcrDiff / FRAMES;
+                const avgPitchDiff = totalPitchDiff / FRAMES;
+
+                // احتساب درجات التطابق الثلاثية مع معايير علم الصوتيات
+                const energyScore = Math.max(0, 100 - (avgRmsDiff * 380));
+                const frequencyScore = Math.max(0, 100 - (avgZcrDiff * 420));
+                const pitchCadenceScore = Math.max(0, 100 - (avgPitchDiff * 250));
+
+                // الدرجة المركبة الواقعية
+                let matchScore = (energyScore * 0.30) + (frequencyScore * 0.40) + (pitchCadenceScore * 0.30);
+                matchScore = Math.max(15, Math.min(99, Math.round(matchScore)));
 
                 return { isNoSound: false, score: matchScore };
 
             } catch (e) {
                 console.warn("AI Audio Matching analysis fallback:", e);
-                return { isNoSound: false, score: 50 };
+                return { isNoSound: false, score: 55 };
             }
         }
 
-        // استخراج خصائص الترددات وطبقات الصوت (FFT + Spectrum Centroid + Zero Crossing Rate)
+        // استخراج خصائص الإطارات الصوتية الصوتية القياسية (Framed Energy + Zero Crossings + Autocorrelation Pitch)
+        function extractFramedAcousticFeatures(data, frameCount) {
+            const frameSize = Math.floor(data.length / frameCount);
+            const rmsArr = [];
+            const zcrArr = [];
+            const pitchArr = [];
+
+            for (let f = 0; f < frameCount; f++) {
+                const start = f * frameSize;
+                const end = start + frameSize;
+                let frameSumSq = 0;
+                let zcCount = 0;
+
+                for (let i = start; i < end; i++) {
+                    frameSumSq += data[i] * data[i];
+                    if (i > start && ((data[i] >= 0 && data[i-1] < 0) || (data[i] < 0 && data[i-1] >= 0))) {
+                        zcCount++;
+                    }
+                }
+
+                const frameRms = Math.sqrt(frameSumSq / (frameSize || 1));
+                const frameZcr = zcCount / (frameSize || 1);
+
+                // تقريب Pitch عبر Autocorrelation بسيط داخل الإطار
+                let maxCorr = 0;
+                let bestLag = 0;
+                const maxLag = Math.min(250, Math.floor(frameSize / 2));
+                for (let lag = 20; lag < maxLag; lag += 2) {
+                    let corr = 0;
+                    for (let i = start; i < end - lag; i++) {
+                        corr += data[i] * data[i + lag];
+                    }
+                    if (corr > maxCorr) {
+                        maxCorr = corr;
+                        bestLag = lag;
+                    }
+                }
+
+                const normPitch = bestLag > 0 ? (1 / bestLag) : 0;
+
+                rmsArr.push(frameRms);
+                zcrArr.push(frameZcr);
+                pitchArr.push(normPitch);
+            }
+
+            return { rms: rmsArr, zcr: zcrArr, pitch: pitchArr };
+        }
+
+        // استخراج خصائص الترددات وطبقات الصوت القديمة للحفاظ على بنية الدوال
         function extractAdvancedAudioFeatures(buffer) {
             const data = buffer.getChannelData(0);
             let sumSquare = 0;
