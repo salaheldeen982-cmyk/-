@@ -47,63 +47,45 @@
         }
 
         .top-bar { 
-            position: sticky; 
-            top: 0; 
-            width: 100%; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            z-index: 1000; 
-            padding: 12px 20px;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-color);
+            position: sticky; top: 0; width: 100%; display: flex; 
+            justify-content: space-between; align-items: center; z-index: 1000; 
+            padding: 12px 20px; background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color);
         }
-        .logo { font-size: 1.5rem; font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; }
+        .logo { font-size: 1.4rem; font-weight: 900; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; }
         .settings-btns { display: flex; gap: 8px; }
-        .icon-btn { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 12px; border-radius: 10px; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.85rem; }
+        .icon-btn { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); padding: 6px 12px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.85rem; }
 
         .container {
-            background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--border-color);
-            border-radius: 24px;
-            padding: 25px;
-            width: 92%;
-            max-width: 520px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            text-align: center;
-            margin-top: 20px;
+            background: var(--card-bg); backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color); border-radius: 24px;
+            padding: 25px; width: 92%; max-width: 520px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center; margin-top: 20px;
         }
 
         .screen { display: none; }
-        .screen.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        .screen.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .form-group { margin-bottom: 15px; text-align: right; }
-        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); }
+        .form-group { margin-bottom: 12px; text-align: right; }
+        [dir="ltr"] .form-group { text-align: left; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); }
 
         input[type="text"], input[type="password"], select {
-            width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-color);
+            width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-color);
             background: rgba(0, 0, 0, 0.2); color: var(--text-color); font-size: 0.95rem; outline: none;
         }
 
-        .avatar-section { margin: 15px 0; }
-        .avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; max-height: 160px; overflow-y: auto; padding: 4px; }
-        .avatar-item { position: relative; border-radius: 14px; border: 2px solid transparent; cursor: pointer; background: rgba(255,255,255,0.05); padding: 4px; text-align: center; }
-        .avatar-item img { width: 100%; border-radius: 10px; height: 50px; object-fit: cover; }
+        .avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; max-height: 140px; overflow-y: auto; padding: 4px; }
+        .avatar-item { position: relative; border-radius: 12px; border: 2px solid transparent; cursor: pointer; background: rgba(255,255,255,0.05); padding: 4px; }
+        .avatar-item img { width: 100%; border-radius: 8px; height: 45px; object-fit: cover; }
         .avatar-item.selected { border-color: var(--accent-color); background: rgba(139, 92, 246, 0.2); }
-        .vip-badge { position: absolute; top: 4px; right: 4px; background: var(--gold); color: #000; font-size: 0.55rem; font-weight: 900; padding: 1px 3px; border-radius: 4px; }
 
         .btn-primary {
             width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--gradient);
-            color: white; font-size: 1rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
-            margin-top: 8px;
+            color: white; font-size: 0.95rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); margin-top: 8px;
         }
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); color: var(--text-color);
-        }
+        .btn-secondary { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); color: var(--text-color); }
 
         .record-btn {
             background: #ef4444; color: white; border: none; border-radius: 50%; width: 75px; height: 75px;
@@ -116,18 +98,16 @@
             display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.2);
             padding: 10px 15px; border-radius: 16px; margin-bottom: 15px; border: 1px solid var(--border-color);
         }
-        .user-profile-badge img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-color); }
+        .user-profile-badge img { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--accent-color); }
 
         .id-badge {
             font-size: 0.75rem; color: var(--gold); background: rgba(245, 158, 11, 0.15);
             padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
         }
 
-        /* Modal Styles */
         .modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 2000;
-            justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 2000; justify-content: center; align-items: center;
         }
         .modal.active { display: flex; }
         .modal-content {
@@ -137,15 +117,15 @@
 
         .list-item {
             display: flex; align-items: center; justify-content: space-between;
-            background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; margin-bottom: 8px;
+            background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 12px; margin-bottom: 8px;
         }
 
-        /* Chat box */
         .chat-box {
             display: none; width: 92%; max-width: 520px; background: var(--card-bg);
-            border: 1px solid var(--border-color); border-radius: 16px; padding: 15px; margin-top: 15px;
+            border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; margin-top: 15px;
         }
-        .chat-messages { height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; text-align: right; }
+        .chat-messages { height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; text-align: right; }
+        [dir="ltr"] .chat-messages { text-align: left; }
         .chat-msg { font-size: 0.85rem; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 8px; }
         .chat-input-group { display: flex; gap: 8px; }
         .chat-input-group input { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: var(--text-color); }
@@ -155,8 +135,9 @@
 <body>
 
     <div class="top-bar">
-        <div class="logo"><i class="fa-solid fa-gamepad"></i> <span>سرحان بارتي</span></div>
+        <div class="logo"><i class="fa-solid fa-gamepad"></i> <span data-i18n="appTitle">سرحان بارتي</span></div>
         <div class="settings-btns">
+            <button class="icon-btn" onclick="toggleLanguage()"><i class="fa-solid fa-globe"></i> <span id="lang-btn-text">EN</span></button>
             <button class="icon-btn" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i></button>
         </div>
     </div>
@@ -164,17 +145,17 @@
     <div class="container">
         <!-- Screen 1: Login -->
         <div id="screen-login" class="screen active">
-            <h2 style="margin-bottom: 15px;">تسجيل الدخول</h2>
+            <h2 style="margin-bottom: 15px;" data-i18n="loginHeader">تسجيل الدخول</h2>
             <div class="form-group">
-                <label>اسم اللاعب (15 حرف كحد أقصى)</label>
-                <input type="text" id="username" maxlength="15" placeholder="أدخل اسمك هنا...">
+                <label data-i18n="nameLabel">اسم اللاعب</label>
+                <input type="text" id="username" maxlength="15" placeholder="...">
             </div>
             
             <div class="avatar-section">
-                <label>اختر شخصيتك</label>
+                <label data-i18n="avatarLabel">اختر شخصيتك</label>
                 <div class="avatar-grid" id="avatar-grid"></div>
             </div>
-            <button class="btn-primary" onclick="saveLoginAndGoToLobby()">دخول اللعبة</button>
+            <button class="btn-primary" onclick="saveLoginAndGoToLobby()" data-i18n="enterGameBtn">دخول اللعبة</button>
         </div>
 
         <!-- Screen 2: Lobby -->
@@ -182,37 +163,37 @@
             <div class="user-profile-badge">
                 <img id="lobby-user-avatar" src="" alt="Avatar">
                 <div style="text-align: right; flex: 1;">
-                    <div style="font-weight: 700; font-size: 1rem;" id="lobby-user-name">اسم اللاعب</div>
+                    <div style="font-weight: 700; font-size: 1rem;" id="lobby-user-name">Player</div>
                     <div class="id-badge" onclick="copyMyID()"><i class="fa-solid fa-copy"></i> ID: <span id="lobby-user-id">------</span></div>
                 </div>
-                <button class="icon-btn" onclick="openFriendsModal()"><i class="fa-solid fa-user-group"></i> الأصدقاء</button>
+                <button class="icon-btn" onclick="openFriendsModal()"><i class="fa-solid fa-user-group"></i> <span data-i18n="friendsBtn">الأصدقاء</span></button>
             </div>
 
-            <h2>صالة الانتظار</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.85rem;">أنشئ غرفة أو انضم للغرف المتاحة</p>
+            <h2 data-i18n="lobbyTitle">صالة الانتظار</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 0.85rem;" data-i18n="lobbySub">أنشئ غرفة أو انضم لغرفة متاحة</p>
 
-            <button class="btn-primary" onclick="openCreateRoomModal()"><i class="fa-solid fa-plus-circle"></i> إنشاء غرفة جديدة</button>
-            <button class="btn-primary btn-secondary" onclick="openPublicRoomsModal()"><i class="fa-solid fa-globe"></i> استكشاف الغرف المفتوحة</button>
+            <button class="btn-primary" onclick="openCreateRoomModal()"><i class="fa-solid fa-plus-circle"></i> <span data-i18n="createRoomBtn">إنشاء غرفة جديدة</span></button>
+            <button class="btn-primary btn-secondary" onclick="openPublicRoomsModal()"><i class="fa-solid fa-globe"></i> <span data-i18n="explorePublicBtn">استكشاف الغرف المفتوحة</span></button>
             
             <div style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
                 <div class="form-group">
-                    <input type="text" id="room-code-input" placeholder="أدخل رقم الغرفة للإنضمام" style="text-align: center; font-size: 1rem;">
+                    <input type="text" id="room-code-input" placeholder="أدخل كود الغرفة" style="text-align: center;">
                 </div>
-                <button class="btn-primary" style="background: transparent; border: 2px solid var(--accent-color);" onclick="joinRoomByCode()">الانضمام كود الغرفة</button>
+                <button class="btn-primary" style="background: transparent; border: 2px solid var(--accent-color);" onclick="joinRoomByCode()" data-i18n="joinCodeBtn">الانضمام بكود الغرفة</button>
             </div>
         </div>
 
         <!-- Screen 3: Game Room -->
         <div id="screen-room" class="screen">
             <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; margin-bottom: 15px;">
-                <span>رقم الغرفة:</span>
+                <span data-i18n="roomCodeText">رقم الغرفة:</span>
                 <div style="font-size: 1.5rem; letter-spacing: 3px; font-weight: 900; color: var(--accent-color);" id="display-room-code">----</div>
             </div>
-            <h3>اللاعبون المتواجدون (<span id="player-count">0</span>/8)</h3>
+            <h3><span data-i18n="playersTitle">اللاعبون المتواجدون</span> (<span id="player-count">0</span>/8)</h3>
             <div id="players-list" style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;"></div>
             
-            <button class="btn-primary" id="btn-start-game" onclick="startGameHost()" disabled>بدء اللعبة الان (يلزم لاعبين على الأقل)</button>
-            <p id="txt-waiting-host" style="color: var(--gold); display:none; margin-top:10px;">في انتظار المضيف لبدء اللعبة...</p>
+            <button class="btn-primary" id="btn-start-game" onclick="startGameHost()" disabled data-i18n="startGameBtn">بدء اللعبة الان</button>
+            <p id="txt-waiting-host" style="color: var(--gold); display:none; margin-top:10px;" data-i18n="waitingHostText">في انتظار المضيف لبدء اللعبة...</p>
         </div>
 
         <!-- Screen 4: Voice Game Arena -->
@@ -222,17 +203,16 @@
                 <h3 id="stage-title">استمع للصوت وقم بتقليده!</h3>
             </div>
             <div style="margin: 15px 0;">
-                <button class="btn-primary" onclick="playTargetSound()"><i class="fa-solid fa-volume-high"></i> تشغيل الصوت المطلوب</button>
-                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top:10px;">اضغط على الميكروفون للتقليد (4 ثوانٍ):</p>
+                <button class="btn-primary" onclick="playTargetSound()"><i class="fa-solid fa-volume-high"></i> <span data-i18n="playSoundBtn">تشغيل الصوت المطلوب</span></button>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top:10px;" data-i18n="recordInstructions">اضغط على الميكروفون للتقليد (4 ثوانٍ):</p>
                 <button class="record-btn" id="btn-record" onclick="startRecording4s()"><i class="fa-solid fa-microphone"></i></button>
-                <div id="recording-timer" style="font-size: 1.1rem; font-weight: bold; color: #ef4444;"></div>
             </div>
 
-            <div id="waiting-others-msg" style="display:none; color: var(--gold); font-weight: bold; margin-top: 10px;">
-                <i class="fa-solid fa-check-circle"></i> تم تسجيل صوتك بنجاح! بانتظار الباقيين...
+            <div id="waiting-others-msg" style="display:none; color: var(--gold); font-weight: bold; margin-top: 10px;" data-i18n="waitingOthersText">
+                تم تسجيل صوتك بنجاح! بانتظار باقي اللاعبين...
             </div>
 
-            <button class="btn-primary" id="btn-host-start-listening" style="display:none; background: #10b981;" onclick="hostTriggerListeningPhase()" disabled>
+            <button class="btn-primary" id="btn-host-start-listening" style="display:none; background: #10b981;" onclick="hostTriggerListeningPhase()" disabled data-i18n="hostListeningBtn">
                 بدء سماع الأصوات
             </button>
         </div>
@@ -240,33 +220,33 @@
         <!-- Screen 5: Listening Phase -->
         <div id="screen-listening" class="screen">
             <div style="background: rgba(0,0,0,0.25); border-radius: 16px; padding: 12px; margin-bottom: 12px;">
-                <h3 style="color: var(--accent-color);">🎧 الاستماع لتسجيلات اللاعبين</h3>
+                <h3 style="color: var(--accent-color);" data-i18n="listeningHeader">🎧 الاستماع لتسجيلات اللاعبين</h3>
             </div>
             
             <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 15px; margin-top: 10px;">
                 <img id="current-speaker-avatar" src="" style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent-color);">
-                <h4 id="current-speaker-name" style="font-size: 1.1rem; margin-top:5px;">اسم اللاعب</h4>
-                <div id="playback-status" style="margin: 10px 0; font-size: 0.9rem; color: var(--gold);">في الانتظار...</div>
+                <h4 id="current-speaker-name" style="font-size: 1.1rem; margin-top:5px;">Player</h4>
+                <div id="playback-status" style="margin: 10px 0; font-size: 0.9rem; color: var(--gold);">...</div>
                 <div id="current-score-display" style="font-weight: bold; font-size: 1rem; color: #10b981;"></div>
             </div>
 
-            <button class="btn-primary" id="btn-host-next-stage" style="display:none;" onclick="hostAdvanceNextStage()">الانتقال للمرحلة التالية ⏩</button>
+            <button class="btn-primary" id="btn-host-next-stage" style="display:none;" onclick="hostAdvanceNextStage()" data-i18n="nextStageBtn">الانتقال للمرحلة التالية ⏩</button>
         </div>
 
         <!-- Screen 6: Results -->
         <div id="screen-results" class="screen">
-            <h2 style="color: var(--gold);"><i class="fa-solid fa-trophy"></i> الترتيب النهائي</h2>
+            <h2 style="color: var(--gold);"><i class="fa-solid fa-trophy"></i> <span data-i18n="leaderboardTitle">الترتيب النهائي</span></h2>
             <div id="final-leaderboard" style="margin: 15px 0;"></div>
-            <button class="btn-primary" onclick="backToLobbyFromResults()">العودة إلى الردهة 🔄</button>
+            <button class="btn-primary" onclick="backToLobbyFromResults()" data-i18n="backLobbyBtn">العودة إلى الردهة 🔄</button>
         </div>
     </div>
 
     <!-- Live Room Chat -->
     <div class="chat-box" id="global-chat-box">
-        <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; color: var(--accent-color);"><i class="fa-solid fa-comments"></i> شات الغرفة</div>
+        <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 6px; color: var(--accent-color);"><i class="fa-solid fa-comments"></i> <span data-i18n="roomChatTitle">شات الغرفة</span></div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-group">
-            <input type="text" id="chat-input" placeholder="اكتب رسالة..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+            <input type="text" id="chat-input" placeholder="..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
             <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
@@ -274,50 +254,50 @@
     <!-- MODAL: Create Room -->
     <div class="modal" id="modal-create-room">
         <div class="modal-content">
-            <h3>إنشاء غرفة جديدة</h3>
+            <h3 data-i18n="createModalTitle">إنشاء غرفة جديدة</h3>
             <div class="form-group" style="margin-top: 15px;">
-                <label>نوع الغرفة</label>
+                <label data-i18n="roomTypeLabel">نوع الغرفة</label>
                 <select id="create-room-type" onchange="toggleRoomPassInput()">
-                    <option value="public">مفتوحة (عنونة للجميع)</option>
-                    <option value="private">مغلقة (بكود/كلمة سر)</option>
+                    <option value="public" data-i18n="optPublic">مفتوحة (تظهر للجميع)</option>
+                    <option value="private" data-i18n="optPrivate">مغلقة (بكود/كلمة سر)</option>
                 </select>
             </div>
             <div class="form-group" id="pass-input-group" style="display:none;">
-                <label>كلمة السر للغرفة</label>
-                <input type="password" id="create-room-pass" placeholder="أدخل كلمة سر الغرفة">
+                <label data-i18n="roomPassLabel">كلمة السر للغرفة</label>
+                <input type="password" id="create-room-pass" placeholder="...">
             </div>
-            <button class="btn-primary" onclick="confirmCreateRoom()">تأكيد الإنشاء</button>
-            <button class="btn-primary btn-secondary" onclick="closeModal('modal-create-room')">إلغاء</button>
+            <button class="btn-primary" onclick="confirmCreateRoom()" data-i18n="confirmCreateBtn">تأكيد الإنشاء</button>
+            <button class="btn-primary btn-secondary" onclick="closeModal('modal-create-room')" data-i18n="cancelBtn">إلغاء</button>
         </div>
     </div>
 
     <!-- MODAL: Public Rooms List -->
     <div class="modal" id="modal-public-rooms">
         <div class="modal-content">
-            <h3>الغرف المفتوحة المتاحة</h3>
+            <h3 data-i18n="publicRoomsTitle">الغرف المفتوحة المتاحة</h3>
             <div id="public-rooms-list" style="margin: 15px 0; max-height: 200px; overflow-y: auto;"></div>
-            <button class="btn-primary btn-secondary" onclick="closeModal('modal-public-rooms')">إغلاق</button>
+            <button class="btn-primary btn-secondary" onclick="closeModal('modal-public-rooms')" data-i18n="closeBtn">إغلاق</button>
         </div>
     </div>
 
     <!-- MODAL: Friends List & Private Chat -->
     <div class="modal" id="modal-friends">
         <div class="modal-content">
-            <h3>قائمة الأصدقاء والدردشة</h3>
+            <h3 data-i18n="friendsModalTitle">الأصدقاء والدردشة</h3>
             <div class="form-group" style="margin-top:10px;">
-                <input type="text" id="add-friend-id-input" placeholder="أدخل ID الصديق لإضافته">
-                <button class="btn-primary" style="margin-top:5px; padding:8px;" onclick="addFriendByID()">إضافة صديق</button>
+                <input type="text" id="add-friend-id-input" placeholder="أدخل ID الصديق">
+                <button class="btn-primary" style="margin-top:5px; padding:8px;" onclick="addFriendByID()" data-i18n="addFriendBtn">إضافة صديق</button>
             </div>
             <div id="friends-list" style="margin: 15px 0; max-height: 150px; overflow-y: auto;"></div>
             <div id="private-chat-container" style="display:none; border-top:1px solid var(--border-color); padding-top:10px;">
-                <h4 id="private-chat-title">محادثة مع: </h4>
+                <h4 id="private-chat-title">Chat</h4>
                 <div class="chat-messages" id="private-chat-messages" style="height:100px;"></div>
                 <div class="chat-input-group">
-                    <input type="text" id="private-chat-input" placeholder="رسالة خاصة...">
+                    <input type="text" id="private-chat-input" placeholder="...">
                     <button class="chat-send-btn" onclick="sendPrivateChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
-            <button class="btn-primary btn-secondary" onclick="closeModal('modal-friends')" style="margin-top:10px;">إغلاق</button>
+            <button class="btn-primary btn-secondary" onclick="closeModal('modal-friends')" style="margin-top:10px;" data-i18n="closeBtn">إغلاق</button>
         </div>
     </div>
 
@@ -340,10 +320,9 @@
         const auth = getAuth(app);
         const database = getDatabase(app);
 
-        let userUID = null;
-        signInAnonymously(auth).then((res) => { userUID = res.user.uid; });
+        signInAnonymously(auth);
 
-        // Device Unique Persistent ID
+        // Persistent Unique ID for device
         let playerID = localStorage.getItem('sarhan_player_id');
         if (!playerID) {
             playerID = "P-" + Math.floor(100000 + Math.random() * 900000);
@@ -351,13 +330,8 @@
         }
         window.playerID = playerID;
 
-        // Save Player Profile Info to Global Users Registry
         window.registerPlayerInDB = function(name, avatar) {
-            set(ref(database, 'users/' + window.playerID), {
-                name: name,
-                avatar: avatar,
-                id: window.playerID
-            });
+            set(ref(database, 'users/' + window.playerID), { name, avatar, id: window.playerID });
         };
 
         window.createRoomInFirebase = async function(roomCode, isPrivate, password, playerData) {
@@ -366,24 +340,17 @@
             window.isHost = true;
             
             const shuffledIndices = [...Array(window.realSoundList.length).keys()].sort(() => 0.5 - Math.random()).slice(0, 5);
-
             const roomRef = ref(database, 'rooms/' + roomCode);
+
             await set(roomRef, { 
-                status: "waiting", 
-                currentStage: 0,
-                stageState: "recording",
-                selectedSoundIndices: shuffledIndices,
-                createdAt: Date.now(),
-                hostUid: uid,
-                isPrivate: isPrivate,
-                password: password || "",
-                code: roomCode
+                status: "waiting", currentStage: 0, stageState: "recording",
+                selectedSoundIndices: shuffledIndices, createdAt: Date.now(),
+                hostUid: uid, isPrivate: isPrivate, password: password || "", code: roomCode
             });
             
             const playerRef = ref(database, `rooms/${roomCode}/players/${uid}`);
             await set(playerRef, playerData);
             onDisconnect(roomRef).remove();
-            
             listenToRoom(roomCode);
         };
 
@@ -393,27 +360,23 @@
             window.isHost = false;
 
             const snapshot = await get(ref(database, 'rooms/' + roomCode));
-            if (!snapshot.exists()) { 
-                alert("الغرفة غير موجودة!"); 
-                return false; 
-            }
+            if (!snapshot.exists()) { alert("الغرفة غير موجودة / Room does not exist"); return false; }
 
             const roomVal = snapshot.val();
             if (roomVal.isPrivate && roomVal.password !== passwordProvided) {
-                alert("كلمة السر الخاصة بالغرفة غير صحيحة!");
+                alert("كلمة السر غير صحيحة / Incorrect Password");
                 return false;
             }
 
             const currentPlayersCount = roomVal.players ? Object.keys(roomVal.players).length : 0;
             if (currentPlayersCount >= 8) {
-                alert("الغرفة ممتلئة (الحد الأقصى 8 لاعبين)!");
+                alert("الغرفة ممتلئة / Room is full");
                 return false;
             }
             
             const pRef = ref(database, `rooms/${roomCode}/players/${uid}`);
             await set(pRef, playerData);
             onDisconnect(pRef).remove();
-
             listenToRoom(roomCode);
             return true;
         };
@@ -424,18 +387,14 @@
             const rooms = [];
             snapshot.forEach(child => {
                 const val = child.val();
-                if (!val.isPrivate && val.status === "waiting") {
-                    rooms.push(val);
-                }
+                if (!val.isPrivate && val.status === "waiting") rooms.push(val);
             });
             return rooms;
         };
 
         window.sendChatToFirebase = function(roomCode, senderName, text) {
             if(!roomCode || !text.trim()) return;
-            push(ref(database, `rooms/${roomCode}/chat`), {
-                sender: senderName, message: text.trim(), time: Date.now()
-            });
+            push(ref(database, `rooms/${roomCode}/chat`), { sender: senderName, message: text.trim(), time: Date.now() });
         };
 
         window.triggerStartGameInFirebase = function(roomCode) {
@@ -461,12 +420,9 @@
             update(ref(database, `rooms/${roomCode}`), { status: "finished", stageState: "finished" });
         };
 
-        // Private Chat realtime connection
         window.sendPrivateMessageDB = function(friendID, text) {
             const chatId = [window.playerID, friendID].sort().join("_");
-            push(ref(database, `private_chats/${chatId}`), {
-                sender: window.playerID, message: text, time: Date.now()
-            });
+            push(ref(database, `private_chats/${chatId}`), { sender: window.playerID, message: text, time: Date.now() });
         };
 
         window.listenToPrivateChat = function(friendID, callback) {
@@ -486,7 +442,7 @@
             onValue(ref(database, `rooms/${roomCode}`), (snapshot) => {
                 const roomData = snapshot.val();
                 if (!roomData) {
-                    alert("تم إغلاق الغرفة من قبل صاحبها!");
+                    alert("تم إغلاق الغرفة / Room was closed");
                     window.location.reload();
                     return;
                 }
@@ -501,20 +457,17 @@
                     window.renderRoomPlayers(playersArr);
 
                     if (window.isHost && roomData.status === "playing" && roomData.stageState === "recording") {
-                        const hostListeningBtn = document.getElementById('btn-host-start-listening');
-                        if (hostListeningBtn) {
-                            hostListeningBtn.style.display = 'block';
+                        const hostBtn = document.getElementById('btn-host-start-listening');
+                        if (hostBtn) {
+                            hostBtn.style.display = 'block';
                             const currentStage = roomData.currentStage || 0;
                             const allSubmitted = playersArr.every(p => p.submittedStage === currentStage);
-                            hostListeningBtn.disabled = !allSubmitted;
-                            hostListeningBtn.innerHTML = allSubmitted ? 'بدء سماع الأصوات (اكتمل التسجيل!)' : 'بانتظار تسجيل الجميع...';
+                            hostBtn.disabled = !allSubmitted;
                         }
                     }
                 }
 
-                if (roomData.chat) {
-                    window.renderChatMessages(Object.values(roomData.chat));
-                }
+                if (roomData.chat) window.renderChatMessages(Object.values(roomData.chat));
 
                 if (roomData.status === "playing") {
                     if (roomData.stageState === "listening" && window.currentScreen !== "screen-listening") {
@@ -531,14 +484,41 @@
     </script>
 
     <script>
-        const realSoundList = [
-            { id: 1, name: "صوت: Huh? 🤔", src: "./universfield-confused-male-voice-huh-352694.mp3" },
-            { id: 2, name: "عبارة: Game Over 🎮", src: "./universfield-game-over-deep-male-voice-clip-352695.mp3" },
-            { id: 3, name: "عبارة: Good Boy! 🐶", src: "./universfield-good-boy-male-voice-praise-352699.mp3" },
-            { id: 4, name: "عبارة: You Stupid Cat! 🐱", src: "./universfield-angry-male-voice-you-stupid-cat-352692.mp3" },
-            { id: 5, name: "تنهيدة: Sigh 😮‍💨", src: "./freesound_community-male-sigh-6763.mp3" }
-        ];
+        const i18n = {
+            ar: {
+                appTitle: "سرحان بارتي", loginHeader: "تسجيل الدخول", nameLabel: "اسم اللاعب", avatarLabel: "اختر شخصيتك",
+                enterGameBtn: "دخول اللعبة", friendsBtn: "الأصدقاء", lobbyTitle: "صالة الانتظار", lobbySub: "أنشئ غرفة أو انضم لغرفة متاحة",
+                createRoomBtn: "إنشاء غرفة جديدة", explorePublicBtn: "استكشاف الغرف المفتوحة", joinCodeBtn: "الانضمام بكود الغرفة",
+                roomCodeText: "رقم الغرفة:", playersTitle: "اللاعبون المتواجدون", startGameBtn: "بدء اللعبة الان", waitingHostText: "في انتظار المضيف لبدء اللعبة...",
+                playSoundBtn: "تشغيل الصوت المطلوب", recordInstructions: "اضغط على الميكروفون للتقليد (4 ثوانٍ):", waitingOthersText: "تم تسجيل صوتك! بانتظار الباقين...",
+                hostListeningBtn: "بدء سماع الأصوات", listeningHeader: "🎧 الاستماع لتسجيلات اللاعبين", nextStageBtn: "الانتقال للمرحلة التالية ⏩",
+                leaderboardTitle: "الترتيب النهائي", backLobbyBtn: "العودة إلى الردهة 🔄", roomChatTitle: "شات الغرفة", createModalTitle: "إنشاء غرفة جديدة",
+                roomTypeLabel: "نوع الغرفة", optPublic: "مفتوحة (تظهر للجميع)", optPrivate: "مغلقة (بكود/كلمة سر)", roomPassLabel: "كلمة السر للغرفة",
+                confirmCreateBtn: "تأكيد الإنشاء", cancelBtn: "إلغاء", publicRoomsTitle: "الغرف المفتوحة المتاحة", closeBtn: "إغلاق",
+                friendsModalTitle: "الأصدقاء والدردشة", addFriendBtn: "إضافة صديق", addBtn: "إضافة", chatBtn: "محادثة"
+            },
+            en: {
+                appTitle: "Sarhan Party", loginHeader: "Login", nameLabel: "Player Name", avatarLabel: "Choose Avatar",
+                enterGameBtn: "Enter Game", friendsBtn: "Friends", lobbyTitle: "Lobby", lobbySub: "Create a room or join one",
+                createRoomBtn: "Create New Room", explorePublicBtn: "Explore Public Rooms", joinCodeBtn: "Join by Room Code",
+                roomCodeText: "Room Code:", playersTitle: "Players Present", startGameBtn: "Start Game Now", waitingHostText: "Waiting for host...",
+                playSoundBtn: "Play Target Sound", recordInstructions: "Tap mic to mimic (4 seconds):", waitingOthersText: "Audio recorded! Waiting for others...",
+                hostListeningBtn: "Start Listening", listeningHeader: "🎧 Listening Phase", nextStageBtn: "Next Stage ⏩",
+                leaderboardTitle: "Final Standings", backLobbyBtn: "Back to Lobby 🔄", roomChatTitle: "Room Chat", createModalTitle: "Create Room",
+                roomTypeLabel: "Room Type", optPublic: "Public (Open)", optPrivate: "Private (Passcode)", roomPassLabel: "Room Passcode",
+                confirmCreateBtn: "Confirm Create", cancelBtn: "Cancel", publicRoomsTitle: "Open Public Rooms", closeBtn: "Close",
+                friendsModalTitle: "Friends & Chat", addFriendBtn: "Add Friend", addBtn: "Add", chatBtn: "Chat"
+            }
+        };
 
+        let currentLang = 'ar';
+        const realSoundList = [
+            { id: 1, name: "Huh? 🤔", src: "./universfield-confused-male-voice-huh-352694.mp3" },
+            { id: 2, name: "Game Over 🎮", src: "./universfield-game-over-deep-male-voice-clip-352695.mp3" },
+            { id: 3, name: "Good Boy! 🐶", src: "./universfield-good-boy-male-voice-praise-352699.mp3" },
+            { id: 4, name: "You Stupid Cat! 🐱", src: "./universfield-angry-male-voice-you-stupid-cat-352692.mp3" },
+            { id: 5, name: "Sigh 😮‍💨", src: "./freesound_community-male-sigh-6763.mp3" }
+        ];
         window.realSoundList = realSoundList;
 
         const defaultAvatars = [
@@ -573,6 +553,17 @@
             }
         };
 
+        function toggleLanguage() {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.getElementById('lang-btn-text').innerText = currentLang === 'ar' ? 'EN' : 'AR';
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) el.innerText = i18n[currentLang][key];
+            });
+        }
+
         function selectAv(el, src) {
             document.querySelectorAll('.avatar-item').forEach(e => e.classList.remove('selected'));
             el.classList.add('selected');
@@ -593,7 +584,7 @@
 
         function saveLoginAndGoToLobby() {
             username = document.getElementById('username').value.trim();
-            if(!username) return alert("يرجى إدخال اسمك!");
+            if(!username) return alert(currentLang === 'ar' ? "يرجى إدخال الاسم!" : "Enter Name!");
             
             localStorage.setItem('sarhan_party_username', username);
             localStorage.setItem('sarhan_party_avatar', selectedAvatar);
@@ -605,10 +596,9 @@
 
         function copyMyID() {
             navigator.clipboard.writeText(window.playerID);
-            alert("تم نسخ الـ ID الخاص بك: " + window.playerID);
+            alert((currentLang === 'ar' ? "تم نسخ الـ ID: " : "Copied ID: ") + window.playerID);
         }
 
-        /* Modal Controllers */
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
@@ -622,11 +612,10 @@
         async function confirmCreateRoom() {
             const type = document.getElementById('create-room-type').value;
             const pass = document.getElementById('create-room-pass').value.trim();
-            if (type === 'private' && !pass) return alert("يرجى كود/كلمة سر الغرفة!");
+            if (type === 'private' && !pass) return alert(currentLang === 'ar' ? "أدخل كلمة سر الغرفة!" : "Enter Passcode!");
 
             currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
             document.getElementById('display-room-code').innerText = currentRoom;
-            document.getElementById('btn-start-game').style.display = 'block';
 
             closeModal('modal-create-room');
             await window.createRoomInFirebase(currentRoom, type === 'private', pass, {
@@ -638,12 +627,12 @@
         async function openPublicRoomsModal() {
             openModal('modal-public-rooms');
             const listContainer = document.getElementById('public-rooms-list');
-            listContainer.innerHTML = 'جاري التحميل...';
+            listContainer.innerHTML = 'Loading...';
             const rooms = await window.getPublicRooms();
             listContainer.innerHTML = '';
 
             if (rooms.length === 0) {
-                listContainer.innerHTML = 'لا توجد غرف مفتوحة حالياً.';
+                listContainer.innerHTML = currentLang === 'ar' ? 'لا توجد غرف مفتوحة حالياً.' : 'No public rooms found.';
                 return;
             }
 
@@ -651,8 +640,8 @@
                 const count = r.players ? Object.keys(r.players).length : 0;
                 listContainer.innerHTML += `
                     <div class="list-item">
-                        <div><strong>غرفة #${r.code}</strong> (${count}/8 لاعبين)</div>
-                        <button class="btn-primary" style="width:auto; padding:6px 12px;" onclick="joinPublicRoom('${r.code}')">دخول</button>
+                        <div><strong>Room #${r.code}</strong> (${count}/8)</div>
+                        <button class="btn-primary" style="width:auto; padding:4px 10px;" onclick="joinPublicRoom('${r.code}')">Enter</button>
                     </div>`;
             });
         }
@@ -671,7 +660,7 @@
 
         async function joinRoomByCode() {
             const code = document.getElementById('room-code-input').value.trim();
-            if (!code) return alert("أدخل رقم الغرفة!");
+            if (!code) return alert("Enter Code!");
             
             let pass = "";
             currentRoom = code;
@@ -685,14 +674,8 @@
             }
         }
 
-        /* Friends System */
-        function getFriends() {
-            return JSON.parse(localStorage.getItem('sarhan_friends') || "[]");
-        }
-
-        function saveFriends(friends) {
-            localStorage.setItem('sarhan_friends', JSON.stringify(friends));
-        }
+        function getFriends() { return JSON.parse(localStorage.getItem('sarhan_friends') || "[]"); }
+        function saveFriends(friends) { localStorage.setItem('sarhan_friends', JSON.stringify(friends)); }
 
         function openFriendsModal() {
             openModal('modal-friends');
@@ -701,18 +684,18 @@
 
         async function addFriendByID(targetID = null) {
             const friendID = targetID || document.getElementById('add-friend-id-input').value.trim();
-            if(!friendID) return alert("أدخل الـ ID الخاص بالصديق!");
-            if(friendID === window.playerID) return alert("لا يمكنك إضافة نفسك كصديق!");
+            if(!friendID) return alert("Enter ID!");
+            if(friendID === window.playerID) return alert("Cannot add yourself!");
 
             const userInfo = await window.fetchUserInfoByID(friendID);
-            if(!userInfo) return alert("لم يتم العثور على لاعب بهذا الـ ID!");
+            if(!userInfo) return alert("Player not found!");
 
             const friends = getFriends();
-            if(friends.some(f => f.id === friendID)) return alert("هذا اللاعب موجود بالفعل في قائمة أصدقائك!");
+            if(friends.some(f => f.id === friendID)) return alert("Already added!");
 
             friends.push(userInfo);
             saveFriends(friends);
-            alert("تمت إضافة الصديق بنجاح!");
+            alert("Added!");
             document.getElementById('add-friend-id-input').value = '';
             renderFriendsList();
         }
@@ -722,7 +705,7 @@
             const container = document.getElementById('friends-list');
             container.innerHTML = '';
             if (friends.length === 0) {
-                container.innerHTML = 'لا يوجد أصدقاء مضافون بعد.';
+                container.innerHTML = 'No friends added.';
                 return;
             }
 
@@ -733,7 +716,7 @@
                             <img src="${f.avatar}" style="width:30px; height:30px; border-radius:50%;">
                             <span>${f.name}</span>
                         </div>
-                        <button class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.8rem;" onclick="openPrivateChat('${f.id}', '${f.name}')">محادثة</button>
+                        <button class="btn-primary" style="width:auto; padding:4px 8px; font-size:0.8rem;" onclick="openPrivateChat('${f.id}', '${f.name}')">${i18n[currentLang].chatBtn}</button>
                     </div>`;
             });
         }
@@ -741,7 +724,7 @@
         function openPrivateChat(friendID, friendName) {
             activeFriendID = friendID;
             document.getElementById('private-chat-container').style.display = 'block';
-            document.getElementById('private-chat-title').innerText = "محادثة مع: " + friendName;
+            document.getElementById('private-chat-title').innerText = "Chat with: " + friendName;
             
             window.listenToPrivateChat(friendID, (msgs) => {
                 const box = document.getElementById('private-chat-messages');
@@ -764,7 +747,6 @@
             }
         }
 
-        /* Room Players Rendering with Add Friend Option */
         window.renderRoomPlayers = function(playersList) {
             document.getElementById('player-count').innerText = playersList.length;
             const list = document.getElementById('players-list');
@@ -775,10 +757,10 @@
                 list.innerHTML += `
                     <div class="list-item">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <img src="${p.avatar}" style="width:35px; height:35px; border-radius:50%;">
+                            <img src="${p.avatar}" style="width:32px; height:32px; border-radius:50%;">
                             <span style="font-weight:700;">${p.name}</span>
                         </div>
-                        ${!isMe ? `<button class="icon-btn" style="padding:4px 8px;" onclick="addFriendByID('${p.id}')"><i class="fa-solid fa-user-plus"></i> إضافة</button>` : ''}
+                        ${!isMe ? `<button class="icon-btn" style="padding:2px 8px;" onclick="addFriendByID('${p.id}')"><i class="fa-solid fa-user-plus"></i> ${i18n[currentLang].addBtn}</button>` : ''}
                     </div>`;
             });
 
@@ -862,7 +844,7 @@
                     stream.getTracks().forEach(track => track.stop());
                 }, 4000);
             } catch(err) {
-                alert("يرجى إعطاء صلاحية الميكروفون للعب!");
+                alert("Permission needed!");
             }
         }
 
@@ -883,8 +865,8 @@
                 const player = playersList[i];
                 document.getElementById('current-speaker-avatar').src = player.avatar;
                 document.getElementById('current-speaker-name').innerText = player.name;
-                document.getElementById('playback-status').innerText = "🔊 جاري تشغيل الصوت...";
-                document.getElementById('current-score-display').innerText = `نسبة التطابق: ${player.lastScore || 0}%`;
+                document.getElementById('playback-status').innerText = "🔊 Listening...";
+                document.getElementById('current-score-display').innerText = `Score: ${player.lastScore || 0}%`;
 
                 if (player.lastAudio) {
                     const audio = new Audio(player.lastAudio);
@@ -897,7 +879,7 @@
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
-            document.getElementById('playback-status').innerText = "✅ اكتملت أصوات هذه المرحلة!";
+            document.getElementById('playback-status').innerText = "✅ Completed!";
             if (window.isHost) document.getElementById('btn-host-next-stage').style.display = 'block';
         };
 
@@ -915,7 +897,7 @@
                             <img src="${p.avatar}" style="width:30px; height:30px; border-radius:50%;">
                             <span>${p.name}</span>
                         </div>
-                        <span style="color:var(--accent-color);">${p.score || 0} نقطة</span>
+                        <span style="color:var(--accent-color);">${p.score || 0} pts</span>
                     </div>`;
             });
         };
