@@ -349,14 +349,19 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getDatabase, ref, set, update, onValue, get, push, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        const firebaseConfig = {
-           // ==========================================
+       // ==========================================
 // Firebase & Realtime Database Configuration
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getDatabase, ref, push, onValue, set, remove, get, child, onDisconnect 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+const firebaseConfig = {
+  // أدخل بيانات مشروعك هنا
+  databaseURL: "https://your-database-default-rtdb.firebaseio.com"
+};
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -579,8 +584,6 @@ function updateProfile(newName, newAvatar) {
 // ==========================================
 function joinRoomUI(roomName) { /* التعامل مع الشاشة والواجهة */ }
 function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
-        };
-
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const database = getDatabase(app);
