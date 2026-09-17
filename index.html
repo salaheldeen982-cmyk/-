@@ -416,7 +416,7 @@
                 <button class="record-btn" id="btn-record" onclick="startRecording4s()">
                     <i class="fa-solid fa-microphone"></i>
                 </button>
-                <div id="recording-timer" style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 10px;"></div>
+                <div id="recording-timer" style="font-size: 1.1rem; font-weight: bold; color: #ef4444; margin-top: 10px;"></div>
             </div>
 
             <div id="waiting-others-msg" style="display:none; color: var(--gold); font-weight: bold; margin-top: 15px;" data-key="waiting_others">
@@ -1419,11 +1419,14 @@
         async function analyzeAndMatchAudio(recordedBlob) {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 1. تحميل ومعالجة صوت المستخدم المباشر
                 const recordedBuffer = await audioCtx.decodeAudioData(await recordedBlob.arrayBuffer());
                 
                 const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
                 const currentSound = activeList[currentStageIndex];
                 
+                // 2. جلب وتحميل المقطع الصوتي الأصلي للمطابقة
                 const targetResponse = await fetch(currentSound.src);
                 const targetArrayBuffer = await targetResponse.arrayBuffer();
                 const targetBuffer = await audioCtx.decodeAudioData(targetArrayBuffer);
@@ -1569,7 +1572,26 @@
                 mediaRecorder.ondataavailable = e => chunks.push(e.data);
                 mediaRecorder.onstop = async () => {
                     const blob = new Blob(chunks, { type: 'audio/webm' });
-                    
+                    const timerEl = document.getElementById('recording-timer');
+                    const isAr = window.currentLang === 'ar';
+
+                    // 1. زمن تحميل واستجلاب المقطعين في واجهة المستخدم
+                    if (timerEl) {
+                        timerEl.style.color = '#f59e0b';
+                        timerEl.innerHTML = isAr 
+                            ? `<i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل المقطع الصوتي وتسجيلك...` 
+                            : `<i class="fa-solid fa-spinner fa-spin"></i> Loading sound file & recording...`;
+                    }
+                    await new Promise(r => setTimeout(r, 1300));
+
+                    // 2. زمن المطابقة والتحليل الفعلي بين الصوتين
+                    if (timerEl) {
+                        timerEl.innerHTML = isAr 
+                            ? `<i class="fa-solid fa-microchip fa-spin"></i> جاري مقارنة الترددات ومطابقة الصوتين...` 
+                            : `<i class="fa-solid fa-microchip fa-spin"></i> Analyzing frequencies & matching audio...`;
+                    }
+                    await new Promise(r => setTimeout(r, 1600));
+
                     const analysis = await analyzeAndMatchAudio(blob);
                     
                     const reader = new FileReader();
@@ -1581,6 +1603,12 @@
                         window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, analysis.score, analysis.isNoSound);
                         
                         document.getElementById('btn-record').disabled = true;
+                        if (timerEl) {
+                            timerEl.style.color = '#10b981';
+                            timerEl.innerHTML = isAr 
+                                ? `✔ تم جلب النسبة ومطابقة الصوتين بنجاح (${analysis.score}%)` 
+                                : `✔ Audio matched successfully (${analysis.score}%)`;
+                        }
                         document.getElementById('waiting-others-msg').style.display = 'block';
                     };
                 };
@@ -1596,7 +1624,7 @@
                         document.getElementById('recording-timer').innerText = `${timeLeft}`;
                     } else {
                         clearInterval(timerInterval);
-                        document.getElementById('recording-timer').innerText = `✔`;
+                        document.getElementById('recording-timer').innerText = `⏳`;
                         document.getElementById('btn-record').classList.remove('recording');
                         mediaRecorder.stop();
                         stream.getTracks().forEach(track => track.stop());
