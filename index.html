@@ -347,243 +347,14 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getDatabase, ref, set, update, onValue, get, push, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, set, update, onValue, get, push, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-       // ==========================================
-// Firebase & Realtime Database Configuration
-// ==========================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { 
-  getDatabase, ref, push, onValue, set, remove, get, child, onDisconnect 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        // إعدادات الفايربيس الخالصة بمشروعك
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            databaseURL: "YOUR_DATABASE_URL"
+        };
 
-const firebaseConfig = {
-  // أدخل بيانات مشروعك هنا
-  databaseURL: "https://your-database-default-rtdb.firebaseio.com"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// ==========================================
-// User Identity & Device ID Setup
-// ==========================================
-let myUserId = localStorage.getItem("app_user_id");
-if (!myUserId) {
-  myUserId = "user_" + Math.random().toString(36).substr(2, 9);
-  localStorage.setItem("app_user_id", myUserId);
-}
-
-let currentUser = {
-  id: myUserId,
-  name: localStorage.getItem("user_name") || "مستخدم جديد",
-  avatar: localStorage.getItem("user_avatar") || "https://via.placeholder.com/150",
-  language: localStorage.getItem("user_lang") || "ar"
-};
-
-let currentRoomId = null;
-let isHost = false;
-
-// ==========================================
-// Language & UI Localization
-// ==========================================
-const translations = {
-  ar: {
-    noSound: "لا يوجد صوت طالع (No Sound)",
-    roomClosed: "تم الخروج وإغلاق الغرفة من قبل المضيف",
-    passExists: "كلمة السر هذه مستخدمة بالفعل، يرجى اختيار كلمة أخرى",
-    friendAdded: "تمت إضافة الصديق بنجاح",
-    invalidId: "معرف الصديق (ID) غير صحيح"
-  },
-  en: {
-    noSound: "No Sound Detected",
-    roomClosed: "Room was closed by the host",
-    passExists: "Password already exists, choose another one",
-    friendAdded: "Friend added successfully",
-    invalidId: "Invalid User ID"
-  }
-};
-
-function getText(key) {
-  return translations[currentUser.language][key] || key;
-}
-
-// ==========================================
-// Room Management (Real-time Rooms Only)
-// ==========================================
-
-// 1. إنشاء غرفة جديدة (مفتوحة أو مغلقة بكلمة سر)
-async function createRoom(roomName, isPrivate = false, password = "") {
-  if (isPrivate && password) {
-    // التحقق من عدم تكرار كلمة السر عبر الغرف القائمة
-    const roomsSnapshot = await get(ref(db, 'rooms'));
-    if (roomsSnapshot.exists()) {
-      const rooms = roomsSnapshot.val();
-      for (let id in rooms) {
-        if (rooms[id].password === password) {
-          alert(getText("passExists"));
-          return;
-        }
-      }
-    }
-  }
-
-  const roomRef = push(ref(db, 'rooms'));
-  currentRoomId = roomRef.key;
-  isHost = true;
-
-  const roomData = {
-    name: roomName,
-    hostId: currentUser.id,
-    isPrivate: isPrivate,
-    password: isPrivate ? password : null,
-    createdAt: Date.now()
-  };
-
-  await set(roomRef, roomData);
-
-  // إغلاق الغرفة وحذفها تلقائياً من الفايربيس بمجرد خروج/انقطاع المضيف
-  onDisconnect(ref(db, `rooms/${currentRoomId}`)).remove();
-
-  listenToRoomStatus(currentRoomId);
-  joinRoomUI(roomName);
-}
-
-// 2. الاستماع للغرف المفتوحة الحقيقية فقط
-function listenToActiveRooms(callback) {
-  const roomsRef = ref(db, 'rooms');
-  onValue(roomsRef, (snapshot) => {
-    const rooms = snapshot.val();
-    const activeRoomsList = [];
-    if (rooms) {
-      for (let id in rooms) {
-        // إظهار الغرف العامة المتاحة حالياً فقط
-        if (!rooms[id].isPrivate) {
-          activeRoomsList.push({ id, ...rooms[id] });
-        }
-      }
-    }
-    callback(activeRoomsList);
-  });
-}
-
-// 3. الانضمام إلى غرفة ومراقبة استمراريتها
-function joinRoom(roomId, inputPassword = null) {
-  get(ref(db, `rooms/${roomId}`)).then((snapshot) => {
-    if (snapshot.exists()) {
-      const room = snapshot.val();
-      if (room.isPrivate && room.password !== inputPassword) {
-        alert("كلمة السر غير صحيحة");
-        return;
-      }
-      currentRoomId = roomId;
-      isHost = false;
-      listenToRoomStatus(currentRoomId);
-      joinRoomUI(room.name);
-    }
-  });
-}
-
-// 4. متابعة حالة الغرفة (التنبيه وإخراج المشاركين إذا أغلقها المضيف)
-function listenToRoomStatus(roomId) {
-  const roomRef = ref(db, `rooms/${roomId}`);
-  onValue(roomRef, (snapshot) => {
-    if (!snapshot.exists() && !isHost) {
-      alert(getText("roomClosed"));
-      leaveRoomUI();
-    }
-  });
-}
-
-// 5. خروج من الغرفة
-function leaveRoom() {
-  if (currentRoomId) {
-    if (isHost) {
-      // حذف الغرفة نهائياً لجميع المتواجدين
-      remove(ref(db, `rooms/${currentRoomId}`));
-    }
-    currentRoomId = null;
-    isHost = false;
-    leaveRoomUI();
-  }
-}
-
-// ==========================================
-// Chat, Audio Detection & Stickers
-// ==========================================
-
-// إرسال رسالة أو استيكر داخل الغرفة
-function sendChatMessage(content, type = "text") {
-  if (!currentRoomId) return;
-  const msgRef = push(ref(db, `chats/${currentRoomId}`));
-  set(msgRef, {
-    senderId: currentUser.id,
-    senderName: currentUser.name,
-    senderAvatar: currentUser.avatar,
-    content: content,
-    type: type, // "text" أو "sticker"
-    timestamp: Date.now()
-  });
-}
-
-// كشف انقطاع/غياب الصوت
-function handleAudioStatus(hasAudio) {
-  if (!hasAudio) {
-    console.warn(getText("noSound"));
-    // يمكن عرض مؤشر UI يفيد بعدم وجود صوت
-  }
-}
-
-// ==========================================
-// Friends System & Direct Chat (Via User ID)
-// ==========================================
-
-// إضافة صديق باستخدام הـ ID الخاص به
-async function addFriendByUserId(friendId) {
-  if (!friendId || friendId === currentUser.id) return;
-
-  const friendRef = ref(db, `users/${friendId}`);
-  const snapshot = await get(friendRef);
-  
-  // حفظ الصديق في قائمة الأصدقاء الخاصة بالمستخدم
-  await set(ref(db, `friends/${currentUser.id}/${friendId}`), {
-    addedAt: Date.now()
-  });
-  alert(getText("friendAdded"));
-}
-
-// إرسال محادثة خاصة بين صديقين
-function sendPrivateMessage(friendId, text) {
-  const chatId = [currentUser.id, friendId].sort().join("_");
-  const msgRef = push(ref(db, `private_chats/${chatId}`));
-  set(msgRef, {
-    senderId: currentUser.id,
-    text: text,
-    timestamp: Date.now()
-  });
-}
-
-// ==========================================
-// Profile Management
-// ==========================================
-function updateProfile(newName, newAvatar) {
-  currentUser.name = newName;
-  currentUser.avatar = newAvatar;
-  localStorage.setItem("user_name", newName);
-  localStorage.setItem("user_avatar", newAvatar);
-  
-  // تحديث بيانات المستخدم في قاعدة البيانات
-  set(ref(db, `users/${currentUser.id}`), {
-    name: newName,
-    avatar: newAvatar
-  });
-}
-
-// ==========================================
-// UI Helpers Placeholder
-// ==========================================
-function joinRoomUI(roomName) { /* التعامل مع الشاشة والواجهة */ }
-function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const database = getDatabase(app);
@@ -611,9 +382,7 @@ function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
             const playerRef = ref(database, `rooms/${roomCode}/players/${uid}`);
             await set(playerRef, playerData);
             
-            // عند انقطاع اتصال صاحب الغرفة، يتم تدمير الغرفة بالكامل تلقائياً
             onDisconnect(roomRef).remove();
-            
             listenToRoom(roomCode);
         };
 
@@ -691,7 +460,6 @@ function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
             onValue(ref(database, `rooms/${roomCode}`), (snapshot) => {
                 const roomData = snapshot.val();
                 
-                // إذا تم إغلاق/حذف الغرفة من قبل صاحبها، عُد بجميع الأعضاء فوراً لصالة الانتظار
                 if (!roomData) {
                     alert(window.currentLang === 'ar' ? "لقد خرج صاحب الغرفة، تم إغلاق الغرفة والعودة للروضة!" : "Host left! Room closed, returning to lobby.");
                     window.location.reload();
@@ -705,7 +473,6 @@ function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
                 if (roomData.players) {
                     const playersArr = Object.values(roomData.players);
                     
-                    // التحقق مما إذا كان صاحب الغرفة ما زال موجوداً
                     const hostExists = playersArr.some(p => p.host === true);
                     if (!hostExists) {
                         alert(window.currentLang === 'ar' ? "لقد غادر صاحب الغرفة، تم إغلاق الغرفة!" : "Host has left, closing room!");
@@ -842,7 +609,6 @@ function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
 
         window.currentLang = 'ar';
 
-        // 12 استيكر تفاعلي عالي الجودة مضمون العمل 100%
         const animatedStickers = [
             "🔥", "😂", "🎉", "👏", "👑", "🗿", "😎", "🚀", "❤️", "😱", "👍", "🏆"
         ];
@@ -1138,7 +904,6 @@ function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
             }
         }
 
-        // تحليل ذكي حقيقي للبصمة الصوتية والمطابقة مع الصوت المستهدف
         async function analyzeAndMatchAudio(recordedBlob) {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1156,12 +921,10 @@ function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
 
                 audioCtx.close();
 
-                // شرط اكتشاف الصمت أو عدم وجود صوت نهائياً (NO SOUND)
                 if (recFeatures.rmsVolume < 0.015) {
                     return { isNoSound: true, score: 0 };
                 }
 
-                // حساب النسبة بدقة الذكاء الاصطناعي بناء على الحجم، والتردد، والنمط الصوتي
                 const volumeDiff = Math.abs(recFeatures.rmsVolume - targetFeatures.rmsVolume);
                 const pitchDiff = Math.abs(recFeatures.zeroCrossRate - targetFeatures.zeroCrossRate);
                 const energyDiff = Math.abs(recFeatures.energy - targetFeatures.energy);
@@ -1209,7 +972,6 @@ function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
                 mediaRecorder.onstop = async () => {
                     const blob = new Blob(chunks, { type: 'audio/webm' });
                     
-                    // تحليل مطابقة الصوت
                     const analysis = await analyzeAndMatchAudio(blob);
                     
                     const reader = new FileReader();
