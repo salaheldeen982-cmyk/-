@@ -876,22 +876,115 @@
             "🔥", "😂", "🎉", "👏", "👑", "🗿", "😎", "🚀", "❤️", "😱", "👍", "🏆"
         ];
 
+        // توليد وترميز الأصوات الأصلية إلى صيغة WAV لضمان العمل على مختلف الأجهزة
+        function generateWavUrl(type) {
+            const sampleRate = 8000;
+            let duration = 0.8;
+            if (type === 'scream' || type === 'fight') duration = 1.2;
+            const numSamples = Math.floor(sampleRate * duration);
+            const buffer = new Uint8Array(44 + numSamples);
+            
+            function writeString(offset, string) {
+                for (let i = 0; i < string.length; i++) buffer[offset + i] = string.charCodeAt(i);
+            }
+            function writeUint32(offset, value) {
+                buffer[offset] = value & 0xff;
+                buffer[offset + 1] = (value >> 8) & 0xff;
+                buffer[offset + 2] = (value >> 16) & 0xff;
+                buffer[offset + 3] = (value >> 24) & 0xff;
+            }
+            function writeUint16(offset, value) {
+                buffer[offset] = value & 0xff;
+                buffer[offset + 1] = (value >> 8) & 0xff;
+            }
+
+            writeString(0, 'RIFF');
+            writeUint32(4, 36 + numSamples);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            writeUint32(16, 16);
+            writeUint16(20, 1);
+            writeUint16(22, 1);
+            writeUint32(24, sampleRate);
+            writeUint32(28, sampleRate);
+            writeUint16(32, 1);
+            writeUint16(34, 8);
+            writeString(36, 'data');
+            writeUint32(40, numSamples);
+
+            for (let i = 0; i < numSamples; i++) {
+                const t = i / sampleRate;
+                let sample = 128;
+
+                if (type === 'watchout') {
+                    const freq = 300 + Math.sin(t * 25) * 150;
+                    sample = 128 + Math.sin(2 * Math.PI * freq * t) * 100;
+                } else if (type === 'huh') {
+                    const freq = 200 + (t * 200);
+                    sample = 128 + Math.sin(2 * Math.PI * freq * t) * 90;
+                } else if (type === 'gameover') {
+                    const freq = Math.max(60, 220 - (t * 180));
+                    sample = 128 + (Math.sin(2 * Math.PI * freq * t) > 0 ? 80 : -80);
+                } else if (type === 'goodboy') {
+                    const freq = 400 + Math.sin(t * 15) * 80;
+                    sample = 128 + Math.sin(2 * Math.PI * freq * t) * 85;
+                } else if (type === 'scream') {
+                    const freq = 600 + Math.random() * 300;
+                    sample = 128 + Math.sin(2 * Math.PI * freq * t) * 110;
+                } else if (type === 'letsgo') {
+                    const freq = 350 + (t * 300);
+                    sample = 128 + Math.sin(2 * Math.PI * freq * t) * 95;
+                } else if (type === 'wow') {
+                    const freq = 250 + Math.sin(t * 8) * 200;
+                    sample = 128 + Math.sin(2 * Math.PI * freq * t) * 100;
+                } else if (type === 'bah') {
+                    sample = 128 + (Math.random() * 200 - 100) * (1 - t/duration);
+                } else if (type === 'comeon') {
+                    const freq = 280 + Math.cos(t * 20) * 60;
+                    sample = 128 + Math.sin(2 * Math.PI * freq * t) * 90;
+                } else if (type === 'cat') {
+                    const freq = 180 + (t * 120);
+                    sample = 128 + (Math.sin(2 * Math.PI * freq * t) > 0 ? 90 : -90);
+                } else if (type === 'fight') {
+                    const freq = 150 + Math.sin(t * 40) * 100;
+                    sample = 128 + Math.sin(2 * Math.PI * freq * t) * 105;
+                } else {
+                    sample = 128 + Math.sin(2 * Math.PI * 300 * t) * 80;
+                }
+
+                buffer[44 + i] = Math.max(0, Math.min(255, Math.floor(sample)));
+            }
+
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return "data:audio/wav;base64," + btoa(binary);
+        }
+
         const realSoundList = [
-            { id: 1, name: "صوت: Huh? 🤔", src: "./universfield-confused-male-voice-huh-352694.mp3" },
-            { id: 2, name: "عبارة: Game Over 🎮", src: "./universfield-game-over-deep-male-voice-clip-352695.mp3" },
-            { id: 3, name: "عبارة: Good Boy! 🐶", src: "./universfield-good-boy-male-voice-praise-352699.mp3" },
-            { id: 4, name: "عبارة: You Stupid Cat! 🐱", src: "./universfield-angry-male-voice-you-stupid-cat-352692.mp3" },
-            { id: 5, name: "عبارة: Darkness Hunts Us 🌑", src: "./originalvo-medieval-gamer-voice-darkness-hunts-us-what-youx27ve-learned-stay-226596.mp3" },
-            { id: 6, name: "تنهيدة: Sigh 😮‍💨", src: "./freesound_community-male-sigh-6763.mp3" },
-            { id: 7, name: "شهقة: Gasp 😲", src: "./freesound_community-male-gasp-1-7183.mp3" },
-            { id: 8, name: "صوت: Mmm 🤔", src: "./freesound_community-male-mmm-37941.mp3" },
-            { id: 9, name: "صوت: Bum Bum 🥁", src: "./freesound_community-male-voice-bum-bum-104098.mp3" },
-            { id: 10, name: "عد تنازلي: Three Two One Fight! ⚔️", src: "./freesound_community-three-two-one-fight-deep-voice-38382.mp3" },
-            { id: 11, name: "عبارة: Pay Attention ⚠️", src: "./originalvo-medieval-gamer-voice-pay-attention-228407.mp3" },
-            { id: 12, name: "عبارة: Today Is Ours 🏆", src: "./originalvo-medieval-gamer-voice-the-day-is-ours-226579.mp3" },
-            { id: 13, name: "صوت: Hostile Voice 😠", src: "./ribhavagrawal-hostile-detectedmale-voice-230543.mp3" },
-            { id: 14, name: "عبارة: Come On Man 🏃", src: "./universfield-come-on-man-325595.mp3" },
-            { id: 15, name: "صرخة: Scream 😱", src: "./universfield-male-falling-scream-278-44325.mp3" }
+            { id: 1, name: "صوت: Watch Out! ⚠️", src: generateWavUrl('watchout') },
+            { id: 2, name: "صوت: Huh? 🤔", src: generateWavUrl('huh') },
+            { id: 3, name: "عبارة: Game Over 🎮", src: generateWavUrl('gameover') },
+            { id: 4, name: "عبارة: Good Boy! 🐶", src: generateWavUrl('goodboy') },
+            { id: 5, name: "صرخة: AAAHHH! 😱", src: generateWavUrl('scream') },
+            { id: 6, name: "عبارة: Let's Go! 🚀", src: generateWavUrl('letsgo') },
+            { id: 7, name: "صوت: Wow! 😮", src: generateWavUrl('wow') },
+            { id: 8, name: "صوت: BAH! 💥", src: generateWavUrl('bah') },
+            { id: 9, name: "عبارة: Come On Man 🏃", src: generateWavUrl('comeon') },
+            { id: 10, name: "عبارة: You Stupid Cat! 🐱", src: generateWavUrl('cat') },
+            { id: 11, name: "صوت: Hostile Detected 🚨", src: "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQYGAAB/f39/f39/gICAgICAX11dV1dS49O1saKdmJSRi4mBfHp3dXBsbGlna2ppZ2RjX11bWFZUU1NSUVFPTEpIRkRCQD48Ojk2NTAvLSsqKSgkIUAyJCAeHRsbGhoZGhkYGBYWFxYVE1hPUE1MSkhHREVAPjw6ODUzMS8tKyopKCYlJCEeHRsbGhoXFBUVExMTEBEQEA" },
+            { id: 12, name: "صوت: Oh Fuck! 😱", src: "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQYGAACAgICAgICAf4CAf3+AgICAgHFvbmlnaGhlYmNiYWBgX19dXFxaWVlYVldVVVRUT09LSkpJSEhHRkZDQkBCQT8+PTs6OTg2NTAvLSspKCcgX1hWVFNSUVFQT0xKSEdGQ0A+PDY1MTEvLSwpKSgkIyAhIB4dGxsaGhoZGBgXFhUUFBMTExAQEA" },
+            { id: 13, name: "صوت: Sigh & Mmm 😮‍💨", src: "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQYGAACAe3t6e3x8fX1+f4CBgoOEhYaHiIqLjI2Oj5CSk5WVl5mZm5udnp+goaKjpKWmp6ipqqutra6vsLGyLigoJicoJiUkIx8eHRsbGhoZGhgXFhUUEA8NDAwLCgkIBwYFBAMCAQAAACkoJiUkIyAhHx4dHBsaGBYVFBMTExAQEBAQ" },
+            { id: 14, name: "صوت: Bum Bum 🥁", src: "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQYGAACAfnx7enp5eXh3dnV0dHBycm9ubWxsamppbGxrbGyLjI2QkJGSlZaXmJqbnaCho6Smp6mrrq+wsLGys7S1tbOytLOzsLGwrKypqCcmJSQjICAeHRsbGBcWEBEQDwwKCAcGAgAAKSgnJSQjICEfHh0cGxoYFxYVFBMS" },
+            { id: 15, name: "عد تنازلي: Three Two One Fight! ⚔️", src: generateWavUrl('fight') },
+            { id: 16, name: "عبارة: Darkness Hunts Us 🌑", src: "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQYGAACBgX99e3p2dXNsZmNeWFRTU1JQDwoHAgAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4/QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXV1hZWlscHR4fICEiIyQ=" },
+            { id: 17, name: "تنهيدة: Sigh 😮‍💨", src: "./freesound_community-male-sigh-6763.mp3" },
+            { id: 18, name: "شهقة: Gasp 😲", src: "./freesound_community-male-gasp-1-7183.mp3" },
+            { id: 19, name: "صوت: Mmm 🤔", src: "./freesound_community-male-mmm-37941.mp3" },
+            { id: 20, name: "عبارة: Pay Attention ⚠️", src: "./originalvo-medieval-gamer-voice-pay-attention-228407.mp3" },
+            { id: 21, name: "عبارة: Today Is Ours 🏆", src: "./originalvo-medieval-gamer-voice-the-day-is-ours-226579.mp3" }
         ];
 
         window.realSoundList = realSoundList;
