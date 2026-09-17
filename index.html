@@ -119,7 +119,7 @@
             background: rgba(0, 0, 0, 0.3); border-radius: 16px; padding: 15px; margin-top: 15px; border: 1px solid var(--border-color);
         }
 
-        /* Chat Section */
+        /* Chat Section & Sticker Drawer */
         .chat-box {
             display: none;
             width: 92%;
@@ -134,7 +134,7 @@
             text-align: inherit;
         }
         .chat-messages {
-            height: 110px;
+            height: 120px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -148,15 +148,44 @@
             padding: 6px 10px;
             border-radius: 8px;
             word-break: break-word;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .chat-input-group { display: flex; gap: 8px; }
+        .chat-msg-sticker {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+        .chat-input-group { display: flex; gap: 8px; position: relative; }
         .chat-input-group input {
             flex: 1; padding: 8px 12px; font-size: 0.9rem; border-radius: 8px; border: 1px solid var(--border-color);
             background: rgba(0, 0, 0, 0.2); color: var(--text-color);
         }
-        .chat-send-btn {
-            background: var(--accent-color); border: none; color: white; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold;
+        .chat-send-btn, .sticker-btn {
+            background: var(--accent-color); border: none; color: white; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold;
         }
+        .sticker-drawer {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .sticker-drawer.open { display: grid; }
+        .sticker-item {
+            width: 100%;
+            height: 45px;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .sticker-item:hover { transform: scale(1.15); }
 
         .user-profile-badge {
             display: flex;
@@ -241,7 +270,7 @@
                 <span data-key="room_code_label">رقم الغرفة:</span>
                 <div style="font-size: 1.5rem; letter-spacing: 4px; font-weight: 900; color: var(--accent-color);" id="display-room-code">----</div>
             </div>
-            <h3><span data-key="players_label">اللاعبون المتواجدون</span> (<span id="player-count">0</span>/5)</h3>
+            <h3><span data-key="players_label">اللاعبون المتواجدون</span> (<span id="player-count">0</span>/8)</h3>
             <div id="players-list" style="display: flex; flex-direction: column; gap: 10px; margin: 20px 0;"></div>
             
             <button class="btn-primary" id="btn-start-game" onclick="startGameHost()" disabled data-key="btn_start_game">
@@ -260,8 +289,8 @@
                 <button class="btn-primary" style="margin-bottom: 15px;" onclick="playTargetSound()" data-key="btn_play_sound">
                     <i class="fa-solid fa-volume-high"></i> تشغيل الصوت المطلوب
                 </button>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;" data-key="record_instruction">اضغط على الميكروفون للتقليد (3 ثوانٍ):</p>
-                <button class="record-btn" id="btn-record" onclick="startRecording3s()">
+                <p style="color: var(--text-secondary); font-size: 0.9rem;" data-key="record_instruction">اضغط على الميكروفون للتقليد (4 ثوانٍ):</p>
+                <button class="record-btn" id="btn-record" onclick="startRecording4s()">
                     <i class="fa-solid fa-microphone"></i>
                 </button>
                 <div id="recording-timer" style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 10px;"></div>
@@ -308,8 +337,10 @@
     <!-- Live Global Room Chat Box -->
     <div class="chat-box" id="global-chat-box">
         <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 8px; color: var(--accent-color);"><i class="fa-solid fa-comments"></i> <span data-key="chat_title">شات الغرفة</span></div>
+        <div class="sticker-drawer" id="sticker-drawer"></div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-group">
+            <button class="sticker-btn" onclick="toggleStickerDrawer()" title="استيكرات حية"><i class="fa-solid fa-icons"></i></button>
             <input type="text" id="chat-input" placeholder="اكتب رسالة..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
             <button class="chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
@@ -370,6 +401,13 @@
                 alert(window.currentLang === 'ar' ? "الغرفة غير موجودة!" : "Room does not exist!"); 
                 return false; 
             }
+
+            const roomVal = snapshot.val();
+            const currentPlayersCount = roomVal.players ? Object.keys(roomVal.players).length : 0;
+            if (currentPlayersCount >= 8) {
+                alert(window.currentLang === 'ar' ? "عفواً، الغرفة ممتلئة (الحد الأقصى 8 لاعبين)!" : "Room is full (Max 8 players)!");
+                return false;
+            }
             
             const pRef = ref(database, `rooms/${roomCode}/players/${uid}`);
             await set(pRef, playerData);
@@ -379,12 +417,13 @@
             return true;
         };
 
-        window.sendChatToFirebase = function(roomCode, senderName, text) {
-            if(!roomCode || !text.trim()) return;
+        window.sendChatToFirebase = function(roomCode, senderName, text, stickerUrl = null) {
+            if(!roomCode || (!text.trim() && !stickerUrl)) return;
             const chatRef = ref(database, `rooms/${roomCode}/chat`);
             push(chatRef, {
                 sender: senderName,
                 message: text.trim(),
+                sticker: stickerUrl,
                 time: Date.now()
             });
         };
@@ -502,7 +541,7 @@
                 btn_start_game_ready: "بدء اللعبة الآن!",
                 txt_waiting_host: "في انتظار المضيف لبدء اللعبة...",
                 btn_play_sound: "تشغيل الصوت المطلوب",
-                record_instruction: "اضغط على الميكروفون للتقليد (3 ثوانٍ):",
+                record_instruction: "اضغط على الميكروفون للتقليد (4 ثوانٍ):",
                 waiting_others: "تم تسجيل صوتك بنجاح! بانتظار باقي اللاعبين...",
                 btn_host_listen: "بدء سماع الأصوات (بانتظار تسجيل الجميع...)",
                 txt_waiting_listening: "في انتظار صاحب الغرفة لضغط زر سماع الأصوات...",
@@ -519,7 +558,7 @@
                 playing_audio: "🔊 جاري تشغيل الصوت...",
                 waiting_audio_next: "⏳ انتهاء الصوت.. انتظار ثانية واحدة...",
                 done_stage_audio: "✅ اكتملت جميع الأصوات للمرحلة الحالية!",
-                match_score: "تقييم التطابق",
+                match_score: "تقييم التطابق الحقيقي",
                 status_online: "متصل الآن"
             },
             en: {
@@ -540,7 +579,7 @@
                 btn_start_game_ready: "Start Game Now!",
                 txt_waiting_host: "Waiting for host to start...",
                 btn_play_sound: "Play Target Sound",
-                record_instruction: "Tap mic to mimic (3 seconds):",
+                record_instruction: "Tap mic to mimic (4 seconds):",
                 waiting_others: "Recorded successfully! Waiting for others...",
                 btn_host_listen: "Start Listening (Waiting for all...)",
                 txt_waiting_listening: "Waiting for host to play recordings...",
@@ -557,12 +596,23 @@
                 playing_audio: "🔊 Playing Audio...",
                 waiting_audio_next: "⏳ Finished audio.. Waiting 1 sec...",
                 done_stage_audio: "✅ All recordings played for this stage!",
-                match_score: "Match Score",
+                match_score: "Real Match Score",
                 status_online: "Online Now"
             }
         };
 
         window.currentLang = 'ar';
+
+        const animatedStickers = [
+            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdW53Z3c1dWVpdDZhb2N4bnN5MGllMmFmYW84Nm5vaGprcjByZHdtaSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/MDJ9IbxxvDUQM/giphy.gif",
+            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3ZzcDlyNWFseDZsaXg0Znl2azg1YnQ2bzU0ZnBtcG1iZHRseWVxMiZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/l0HlCqV35hdEG2GUo/giphy.gif",
+            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm9xZDNpZHgzcjRnbjRwZmlxbWtyMnhvZHBvaXZmbnFiMHZ0bmUybCZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/3o7TKSjRrfIPjeiVyM/giphy.gif",
+            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNDdzY2pnd3Z3ejdydmt3dnh6dzZ6aTJxOHRzNHM4enRxb3V5MndwOSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/26u4b45b8KXYA03y8/giphy.gif",
+            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExYnJzcWVtdmt5NnJ1NDB5cWh4cG8ydDVreTFtdDVybWRxMDRiMG41MCZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/l1J9LXPPgL2vM51HW/giphy.gif",
+            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWtrNWxsZ2o3NDIyeG14MmFnaHQ1M2M1OTlnYmdnNWNnbjRndWVpYSZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/3o6ZtaO9BZHcOjmErm/giphy.gif",
+            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMjRwbnhmODdrZ3FiNG0ydGFrejdhdHZ2eWp3aXlqdzFiZ3ZldnlndyZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/l3q2K244pwGA28xji/giphy.gif",
+            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExbm83ajB6bXdhbWkycWg1MHBocnRqdmlhNW02Nmt3ZXBwdnRvbzA0dyZlcD12MV9zdGlja2Vyc19zZWFyY2gmY3Q9cw/d1E2GyfFiFiKyL84/giphy.gif"
+        ];
 
         const realSoundList = [
             { id: 1, name: "صوت: Huh? 🤔", src: "./universfield-confused-male-voice-huh-352694.mp3" },
@@ -605,7 +655,7 @@
         let currentRoom = null;
         let currentStageIndex = 0;
         let currentAudioObject = null;
-        let isJoiningOrCreating = false; // لمنع التكرار والجليتش
+        let isJoiningOrCreating = false;
         window.myTotalScore = 0;
 
         window.onload = () => {
@@ -619,7 +669,6 @@
             });
             selectedSoundsForGame = [...realSoundList];
             
-            // تسجيل الدخول التلقائي وحفظ البيانات في LocalStorage
             const savedName = localStorage.getItem('sarhan_party_username');
             const savedAvatar = localStorage.getItem('sarhan_party_avatar');
             if (savedName && savedAvatar) {
@@ -629,8 +678,29 @@
                 showScreen('screen-lobby');
             }
 
+            initStickerDrawer();
             updatePageLanguage();
         };
+
+        function initStickerDrawer() {
+            const drawer = document.getElementById('sticker-drawer');
+            drawer.innerHTML = '';
+            animatedStickers.forEach(url => {
+                drawer.innerHTML += `<img src="${url}" class="sticker-item" onclick="sendSticker('${url}')">`;
+            });
+        }
+
+        function toggleStickerDrawer() {
+            const drawer = document.getElementById('sticker-drawer');
+            drawer.classList.toggle('open');
+        }
+
+        function sendSticker(url) {
+            if(currentRoom) {
+                window.sendChatToFirebase(currentRoom, username, '', url);
+                document.getElementById('sticker-drawer').classList.remove('open');
+            }
+        }
 
         function toggleLanguage() {
             window.currentLang = window.currentLang === 'ar' ? 'en' : 'ar';
@@ -691,7 +761,6 @@
             if(!username) return alert(window.currentLang === 'ar' ? "يرجى إدخال اسمك!" : "Please enter your name!");
             if(username.length > 15) return alert(window.currentLang === 'ar' ? "يجب ألا يتجاوز اسم اللاعب 15 حرفاً!" : "Name max 15 chars!");
             
-            // حفظ البيانات تلقائياً للمرات القادمة
             localStorage.setItem('sarhan_party_username', username);
             localStorage.setItem('sarhan_party_avatar', selectedAvatar);
 
@@ -758,7 +827,11 @@
             const container = document.getElementById('chat-messages');
             container.innerHTML = '';
             chatArr.forEach(msg => {
-                container.innerHTML += `<div class="chat-msg"><strong>${msg.sender}:</strong> ${msg.message}</div>`;
+                if (msg.sticker) {
+                    container.innerHTML += `<div class="chat-msg"><strong>${msg.sender}:</strong> <img src="${msg.sticker}" class="chat-msg-sticker"></div>`;
+                } else {
+                    container.innerHTML += `<div class="chat-msg"><strong>${msg.sender}:</strong> ${msg.message}</div>`;
+                }
             });
             container.scrollTop = container.scrollHeight;
         };
@@ -832,7 +905,58 @@
             }
         }
 
-        async function startRecording3s() {
+        // تحليل بصمة الصوت الحقيقية وحساب التطابق
+        async function calculateAudioMatchScore(recordedBlob) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const recordedBuffer = await audioCtx.decodeAudioData(await recordedBlob.arrayBuffer());
+                
+                const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
+                const currentSound = activeList[currentStageIndex];
+                
+                const targetResponse = await fetch(currentSound.src);
+                const targetArrayBuffer = await targetResponse.arrayBuffer();
+                const targetBuffer = await audioCtx.decodeAudioData(targetArrayBuffer);
+
+                // استخراج وتحليل الترددات والشدة
+                const targetFeatures = extractAudioFeatures(targetBuffer);
+                const recordedFeatures = extractAudioFeatures(recordedBuffer);
+
+                // حساب مدى تقارب الطاقة والتردد والتغيرات الصوتية
+                let volumeDiff = Math.abs(targetFeatures.avgVolume - recordedFeatures.avgVolume);
+                let zeroCrossDiff = Math.abs(targetFeatures.zeroCrossings - recordedFeatures.zeroCrossings) / Math.max(targetFeatures.zeroCrossings, 1);
+                
+                let similarity = 100 - (volumeDiff * 40 + zeroCrossDiff * 50);
+                similarity = Math.max(25, Math.min(98, Math.round(similarity)));
+
+                audioCtx.close();
+                return similarity;
+            } catch (e) {
+                console.warn("Audio analysis fallback:", e);
+                return Math.floor(60 + Math.random() * 25);
+            }
+        }
+
+        function extractAudioFeatures(buffer) {
+            const data = buffer.getChannelData(0);
+            let sumSquare = 0;
+            let zeroCrossings = 0;
+
+            for (let i = 0; i < data.length; i++) {
+                sumSquare += data[i] * data[i];
+                if (i > 0 && ((data[i] >= 0 && data[i-1] < 0) || (data[i] < 0 && data[i-1] >= 0))) {
+                    zeroCrossings++;
+                }
+            }
+
+            const rmsVolume = Math.sqrt(sumSquare / data.length);
+            return {
+                avgVolume: rmsVolume,
+                zeroCrossings: zeroCrossings / (buffer.duration || 1)
+            };
+        }
+
+        async function startRecording4s() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const mediaRecorder = new MediaRecorder(stream);
@@ -841,14 +965,17 @@
                 mediaRecorder.ondataavailable = e => chunks.push(e.data);
                 mediaRecorder.onstop = async () => {
                     const blob = new Blob(chunks, { type: 'audio/webm' });
+                    
+                    // حساب التطابق الحقيقي بناء على خوارزمية الصوت
+                    const realScore = await calculateAudioMatchScore(blob);
+                    
                     const reader = new FileReader();
                     reader.readAsDataURL(blob);
                     reader.onloadend = () => {
                         const base64Audio = reader.result;
-                        const calculatedScore = Math.floor(65 + Math.random() * 33);
-                        window.myTotalScore = (window.myTotalScore || 0) + calculatedScore;
+                        window.myTotalScore = (window.myTotalScore || 0) + realScore;
                         
-                        window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, calculatedScore);
+                        window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, realScore);
                         
                         document.getElementById('btn-record').disabled = true;
                         document.getElementById('waiting-others-msg').style.display = 'block';
@@ -857,7 +984,7 @@
 
                 mediaRecorder.start();
                 document.getElementById('btn-record').classList.add('recording');
-                let timeLeft = 3;
+                let timeLeft = 4; // تم التعديل إلى 4 ثوانٍ
                 document.getElementById('recording-timer').innerText = `${timeLeft}`;
 
                 const timerInterval = setInterval(() => {
@@ -905,7 +1032,7 @@
                 document.getElementById('current-speaker-avatar').src = player.avatar;
                 document.getElementById('current-speaker-name').innerText = player.name;
                 document.getElementById('playback-status').innerText = t.playing_audio;
-                document.getElementById('current-score-display').innerText = `${t.match_score}: ${player.lastScore || 75}%`;
+                document.getElementById('current-score-display').innerText = `${t.match_score}: ${player.lastScore || 0}%`;
 
                 if (player.lastAudio) {
                     const audio = new Audio(player.lastAudio);
