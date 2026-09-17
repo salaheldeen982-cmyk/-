@@ -350,13 +350,235 @@
         import { getDatabase, ref, set, update, onValue, get, push, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBMpZ7CXOJbgKpMqOjzsbbCcpHBlslU3mw",
-            authDomain: "salah-52496.firebaseapp.com",
-            databaseURL: "https://salah-52496-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "salah-52496",
-            storageBucket: "salah-52496.firebasestorage.app",
-            messagingSenderId: "235427387836",
-            appId: "1:235427387836:web:3b3f060aa47fb10903f3b9"
+           // ==========================================
+// Firebase & Realtime Database Configuration
+// ==========================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+  getDatabase, ref, push, onValue, set, remove, get, child, onDisconnect 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ==========================================
+// User Identity & Device ID Setup
+// ==========================================
+let myUserId = localStorage.getItem("app_user_id");
+if (!myUserId) {
+  myUserId = "user_" + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem("app_user_id", myUserId);
+}
+
+let currentUser = {
+  id: myUserId,
+  name: localStorage.getItem("user_name") || "مستخدم جديد",
+  avatar: localStorage.getItem("user_avatar") || "https://via.placeholder.com/150",
+  language: localStorage.getItem("user_lang") || "ar"
+};
+
+let currentRoomId = null;
+let isHost = false;
+
+// ==========================================
+// Language & UI Localization
+// ==========================================
+const translations = {
+  ar: {
+    noSound: "لا يوجد صوت طالع (No Sound)",
+    roomClosed: "تم الخروج وإغلاق الغرفة من قبل المضيف",
+    passExists: "كلمة السر هذه مستخدمة بالفعل، يرجى اختيار كلمة أخرى",
+    friendAdded: "تمت إضافة الصديق بنجاح",
+    invalidId: "معرف الصديق (ID) غير صحيح"
+  },
+  en: {
+    noSound: "No Sound Detected",
+    roomClosed: "Room was closed by the host",
+    passExists: "Password already exists, choose another one",
+    friendAdded: "Friend added successfully",
+    invalidId: "Invalid User ID"
+  }
+};
+
+function getText(key) {
+  return translations[currentUser.language][key] || key;
+}
+
+// ==========================================
+// Room Management (Real-time Rooms Only)
+// ==========================================
+
+// 1. إنشاء غرفة جديدة (مفتوحة أو مغلقة بكلمة سر)
+async function createRoom(roomName, isPrivate = false, password = "") {
+  if (isPrivate && password) {
+    // التحقق من عدم تكرار كلمة السر عبر الغرف القائمة
+    const roomsSnapshot = await get(ref(db, 'rooms'));
+    if (roomsSnapshot.exists()) {
+      const rooms = roomsSnapshot.val();
+      for (let id in rooms) {
+        if (rooms[id].password === password) {
+          alert(getText("passExists"));
+          return;
+        }
+      }
+    }
+  }
+
+  const roomRef = push(ref(db, 'rooms'));
+  currentRoomId = roomRef.key;
+  isHost = true;
+
+  const roomData = {
+    name: roomName,
+    hostId: currentUser.id,
+    isPrivate: isPrivate,
+    password: isPrivate ? password : null,
+    createdAt: Date.now()
+  };
+
+  await set(roomRef, roomData);
+
+  // إغلاق الغرفة وحذفها تلقائياً من الفايربيس بمجرد خروج/انقطاع المضيف
+  onDisconnect(ref(db, `rooms/${currentRoomId}`)).remove();
+
+  listenToRoomStatus(currentRoomId);
+  joinRoomUI(roomName);
+}
+
+// 2. الاستماع للغرف المفتوحة الحقيقية فقط
+function listenToActiveRooms(callback) {
+  const roomsRef = ref(db, 'rooms');
+  onValue(roomsRef, (snapshot) => {
+    const rooms = snapshot.val();
+    const activeRoomsList = [];
+    if (rooms) {
+      for (let id in rooms) {
+        // إظهار الغرف العامة المتاحة حالياً فقط
+        if (!rooms[id].isPrivate) {
+          activeRoomsList.push({ id, ...rooms[id] });
+        }
+      }
+    }
+    callback(activeRoomsList);
+  });
+}
+
+// 3. الانضمام إلى غرفة ومراقبة استمراريتها
+function joinRoom(roomId, inputPassword = null) {
+  get(ref(db, `rooms/${roomId}`)).then((snapshot) => {
+    if (snapshot.exists()) {
+      const room = snapshot.val();
+      if (room.isPrivate && room.password !== inputPassword) {
+        alert("كلمة السر غير صحيحة");
+        return;
+      }
+      currentRoomId = roomId;
+      isHost = false;
+      listenToRoomStatus(currentRoomId);
+      joinRoomUI(room.name);
+    }
+  });
+}
+
+// 4. متابعة حالة الغرفة (التنبيه وإخراج المشاركين إذا أغلقها المضيف)
+function listenToRoomStatus(roomId) {
+  const roomRef = ref(db, `rooms/${roomId}`);
+  onValue(roomRef, (snapshot) => {
+    if (!snapshot.exists() && !isHost) {
+      alert(getText("roomClosed"));
+      leaveRoomUI();
+    }
+  });
+}
+
+// 5. خروج من الغرفة
+function leaveRoom() {
+  if (currentRoomId) {
+    if (isHost) {
+      // حذف الغرفة نهائياً لجميع المتواجدين
+      remove(ref(db, `rooms/${currentRoomId}`));
+    }
+    currentRoomId = null;
+    isHost = false;
+    leaveRoomUI();
+  }
+}
+
+// ==========================================
+// Chat, Audio Detection & Stickers
+// ==========================================
+
+// إرسال رسالة أو استيكر داخل الغرفة
+function sendChatMessage(content, type = "text") {
+  if (!currentRoomId) return;
+  const msgRef = push(ref(db, `chats/${currentRoomId}`));
+  set(msgRef, {
+    senderId: currentUser.id,
+    senderName: currentUser.name,
+    senderAvatar: currentUser.avatar,
+    content: content,
+    type: type, // "text" أو "sticker"
+    timestamp: Date.now()
+  });
+}
+
+// كشف انقطاع/غياب الصوت
+function handleAudioStatus(hasAudio) {
+  if (!hasAudio) {
+    console.warn(getText("noSound"));
+    // يمكن عرض مؤشر UI يفيد بعدم وجود صوت
+  }
+}
+
+// ==========================================
+// Friends System & Direct Chat (Via User ID)
+// ==========================================
+
+// إضافة صديق باستخدام הـ ID الخاص به
+async function addFriendByUserId(friendId) {
+  if (!friendId || friendId === currentUser.id) return;
+
+  const friendRef = ref(db, `users/${friendId}`);
+  const snapshot = await get(friendRef);
+  
+  // حفظ الصديق في قائمة الأصدقاء الخاصة بالمستخدم
+  await set(ref(db, `friends/${currentUser.id}/${friendId}`), {
+    addedAt: Date.now()
+  });
+  alert(getText("friendAdded"));
+}
+
+// إرسال محادثة خاصة بين صديقين
+function sendPrivateMessage(friendId, text) {
+  const chatId = [currentUser.id, friendId].sort().join("_");
+  const msgRef = push(ref(db, `private_chats/${chatId}`));
+  set(msgRef, {
+    senderId: currentUser.id,
+    text: text,
+    timestamp: Date.now()
+  });
+}
+
+// ==========================================
+// Profile Management
+// ==========================================
+function updateProfile(newName, newAvatar) {
+  currentUser.name = newName;
+  currentUser.avatar = newAvatar;
+  localStorage.setItem("user_name", newName);
+  localStorage.setItem("user_avatar", newAvatar);
+  
+  // تحديث بيانات المستخدم في قاعدة البيانات
+  set(ref(db, `users/${currentUser.id}`), {
+    name: newName,
+    avatar: newAvatar
+  });
+}
+
+// ==========================================
+// UI Helpers Placeholder
+// ==========================================
+function joinRoomUI(roomName) { /* التعامل مع الشاشة والواجهة */ }
+function leaveRoomUI() { /* العودة للقائمة الرئيسية */ }
         };
 
         const app = initializeApp(firebaseConfig);
