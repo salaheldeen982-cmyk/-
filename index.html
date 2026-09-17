@@ -1304,4 +1304,399 @@
             
             containers.forEach(container => {
                 if(!container) return;
-                container.innerHTML = `<div styl
+                container.innerHTML = `<div style="font-size:0.75rem; color:var(--gold); font-weight:bold; margin-left:6px; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-users"></i> المتواجدون:</div>`;
+                
+                playersArr.forEach(p => {
+                    const hasSubmitted = p.submittedStage === currentStage;
+                    container.innerHTML += `
+                        <div class="active-player-chip ${hasSubmitted ? 'submitted' : ''}">
+                            <span class="status-dot online" style="width:6px; height:6px;"></span>
+                            <img src="${p.avatar}">
+                            <span>${p.name}</span>
+                            ${hasSubmitted ? '<i class="fa-solid fa-check" style="color:#10b981; font-size:0.7rem; margin-right:2px;"></i>' : ''}
+                        </div>`;
+                });
+            });
+        };
+
+        window.renderRoomPlayers = function(playersList) {
+            document.getElementById('player-count').innerText = playersList.length;
+            const list = document.getElementById('players-list');
+            list.innerHTML = '';
+            const t = translations[window.currentLang];
+
+            playersList.forEach(p => {
+                const isMe = p.deviceId === window.myDeviceId;
+                const alreadyFriend = p.deviceId && isFriend(p.deviceId);
+
+                list.innerHTML += `
+                    <div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.05); padding:10px; border-radius:12px;">
+                        <img src="${p.avatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                        <div style="flex:1; text-align:inherit;">
+                            <div style="font-weight:700;">${p.name}</div>
+                            ${p.deviceId ? `<div style="font-size:0.7rem; color:var(--gold);">ID: ${p.deviceId}</div>` : ''}
+                        </div>
+                        ${!isMe && p.deviceId ? (
+                            alreadyFriend 
+                            ? `<span class="add-friend-btn is-friend">✔ صديق</span>` 
+                            : `<button class="add-friend-btn" onclick="addFriendFromRoom('${p.deviceId}', '${p.name}')">+ صديق</button>`
+                        ) : ''}
+                        ${p.host ? `<span style="font-size:0.75rem; background:var(--accent-color); padding:2px 8px; border-radius:6px;">${t.host_tag}</span>` : ''}
+                    </div>`;
+            });
+
+            const startBtn = document.getElementById('btn-start-game');
+            if (playersList.length >= 2) {
+                startBtn.disabled = false;
+                startBtn.innerText = t.btn_start_game_ready;
+            } else {
+                startBtn.disabled = true;
+                startBtn.innerText = t.btn_start_game;
+            }
+        };
+
+        function startGameHost() {
+            window.triggerStartGameInFirebase(currentRoom);
+        }
+
+        window.startGameClient = function(stageIdx = 0) {
+            window.currentStageIndex = stageIdx;
+            currentStageIndex = stageIdx;
+            showScreen('screen-game');
+            setupStage(currentStageIndex);
+        };
+
+        function setupStage(index) {
+            const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
+            const t = translations[window.currentLang];
+            if(index >= activeList.length) {
+                if(window.isHost) {
+                    window.endGameInFirebase(currentRoom);
+                }
+                return;
+            }
+            document.getElementById('stage-indicator').innerText = `${t.stage_text} ${index + 1} / ${activeList.length}`;
+            document.getElementById('stage-title').innerText = activeList[index].name;
+            document.getElementById('btn-record').disabled = false;
+            document.getElementById('waiting-others-msg').style.display = 'none';
+            document.getElementById('recording-timer').innerText = '';
+
+            if(!window.isHost) {
+                document.getElementById('txt-waiting-listening').style.display = 'block';
+            }
+        }
+
+        function playTargetSound() {
+            const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
+            const currentSound = activeList[currentStageIndex];
+            if (currentSound && currentSound.src) {
+                if (currentAudioObject) {
+                    currentAudioObject.pause();
+                    currentAudioObject.currentTime = 0;
+                }
+                currentAudioObject = new Audio(currentSound.src);
+                currentAudioObject.play().catch(err => console.error("Audio error:", err));
+            }
+        }
+
+        // قص الصمت في البداية والنهاية لضمان تطابق زمني دقيق للترددات
+        function trimAudioSilence(channelData, threshold = 0.012) {
+            let start = 0;
+            let end = channelData.length - 1;
+
+            while (start < channelData.length && Math.abs(channelData[start]) < threshold) {
+                start++;
+            }
+            while (end > start && Math.abs(channelData[end]) < threshold) {
+                end--;
+            }
+
+            if (start >= end) return channelData;
+            return channelData.subarray(start, end + 1);
+        }
+
+        // خوارزمية تحليل ومطابقة الصوت بالذكاء الاصطناعي ومعالجة الإشارات الصوتية القياسية (Acoustic Feature Comparison Engine)
+        async function analyzeAndMatchAudio(recordedBlob) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const recordedBuffer = await audioCtx.decodeAudioData(await recordedBlob.arrayBuffer());
+                
+                const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
+                const currentSound = activeList[currentStageIndex];
+                
+                const targetResponse = await fetch(currentSound.src);
+                const targetArrayBuffer = await targetResponse.arrayBuffer();
+                const targetBuffer = await audioCtx.decodeAudioData(targetArrayBuffer);
+
+                const recRawData = recordedBuffer.getChannelData(0);
+                const recTrimmed = trimAudioSilence(recRawData);
+
+                // فحص عدم وجود صوت أو انخفاض مستويات الطاقة
+                let totalEnergy = 0;
+                for (let i = 0; i < recTrimmed.length; i++) {
+                    totalEnergy += recTrimmed[i] * recTrimmed[i];
+                }
+                const rmsVolume = Math.sqrt(totalEnergy / (recTrimmed.length || 1));
+
+                if (rmsVolume < 0.012 || recTrimmed.length < 1000) {
+                    audioCtx.close();
+                    return { isNoSound: true, score: 0 };
+                }
+
+                const targetRawData = targetBuffer.getChannelData(0);
+                const targetTrimmed = trimAudioSilence(targetRawData);
+
+                // تقسيم الصوت لـ 25 إطارًا زمنيًا متساويًا لمقارنة ديناميكية للترددات والشدة
+                const FRAMES = 25;
+                const recProfile = extractFramedAcousticFeatures(recTrimmed, FRAMES);
+                const targetProfile = extractFramedAcousticFeatures(targetTrimmed, FRAMES);
+
+                audioCtx.close();
+
+                // حساب متوسط الفروق المطلقة للخصائص الصوتية عبر الزمن
+                let totalRmsDiff = 0;
+                let totalZcrDiff = 0;
+                let totalPitchDiff = 0;
+
+                for (let f = 0; f < FRAMES; f++) {
+                    totalRmsDiff += Math.abs(recProfile.rms[f] - targetProfile.rms[f]);
+                    totalZcrDiff += Math.abs(recProfile.zcr[f] - targetProfile.zcr[f]);
+                    totalPitchDiff += Math.abs(recProfile.pitch[f] - targetProfile.pitch[f]);
+                }
+
+                const avgRmsDiff = totalRmsDiff / FRAMES;
+                const avgZcrDiff = totalZcrDiff / FRAMES;
+                const avgPitchDiff = totalPitchDiff / FRAMES;
+
+                // احتساب درجات التطابق الثلاثية مع معايير علم الصوتيات
+                const energyScore = Math.max(0, 100 - (avgRmsDiff * 380));
+                const frequencyScore = Math.max(0, 100 - (avgZcrDiff * 420));
+                const pitchCadenceScore = Math.max(0, 100 - (avgPitchDiff * 250));
+
+                // الدرجة المركبة الواقعية
+                let matchScore = (energyScore * 0.30) + (frequencyScore * 0.40) + (pitchCadenceScore * 0.30);
+                matchScore = Math.max(15, Math.min(99, Math.round(matchScore)));
+
+                return { isNoSound: false, score: matchScore };
+
+            } catch (e) {
+                console.warn("AI Audio Matching analysis fallback:", e);
+                return { isNoSound: false, score: 55 };
+            }
+        }
+
+        // استخراج خصائص الإطارات الصوتية الصوتية القياسية (Framed Energy + Zero Crossings + Autocorrelation Pitch)
+        function extractFramedAcousticFeatures(data, frameCount) {
+            const frameSize = Math.floor(data.length / frameCount);
+            const rmsArr = [];
+            const zcrArr = [];
+            const pitchArr = [];
+
+            for (let f = 0; f < frameCount; f++) {
+                const start = f * frameSize;
+                const end = start + frameSize;
+                let frameSumSq = 0;
+                let zcCount = 0;
+
+                for (let i = start; i < end; i++) {
+                    frameSumSq += data[i] * data[i];
+                    if (i > start && ((data[i] >= 0 && data[i-1] < 0) || (data[i] < 0 && data[i-1] >= 0))) {
+                        zcCount++;
+                    }
+                }
+
+                const frameRms = Math.sqrt(frameSumSq / (frameSize || 1));
+                const frameZcr = zcCount / (frameSize || 1);
+
+                // تقريب Pitch عبر Autocorrelation بسيط داخل الإطار
+                let maxCorr = 0;
+                let bestLag = 0;
+                const maxLag = Math.min(250, Math.floor(frameSize / 2));
+                for (let lag = 20; lag < maxLag; lag += 2) {
+                    let corr = 0;
+                    for (let i = start; i < end - lag; i++) {
+                        corr += data[i] * data[i + lag];
+                    }
+                    if (corr > maxCorr) {
+                        maxCorr = corr;
+                        bestLag = lag;
+                    }
+                }
+
+                const normPitch = bestLag > 0 ? (1 / bestLag) : 0;
+
+                rmsArr.push(frameRms);
+                zcrArr.push(frameZcr);
+                pitchArr.push(normPitch);
+            }
+
+            return { rms: rmsArr, zcr: zcrArr, pitch: pitchArr };
+        }
+
+        // استخراج خصائص الترددات وطبقات الصوت القديمة للحفاظ على بنية الدوال
+        function extractAdvancedAudioFeatures(buffer) {
+            const data = buffer.getChannelData(0);
+            let sumSquare = 0;
+            let zeroCrossings = 0;
+            let spectralSum = 0;
+
+            for (let i = 0; i < data.length; i++) {
+                sumSquare += data[i] * data[i];
+                if (i > 0 && ((data[i] >= 0 && data[i-1] < 0) || (data[i] < 0 && data[i-1] >= 0))) {
+                    zeroCrossings++;
+                }
+                spectralSum += Math.abs(data[i]) * i;
+            }
+
+            const rms = Math.sqrt(sumSquare / data.length);
+            const zcr = zeroCrossings / data.length;
+            const centroid = spectralSum / (sumSquare + 0.0001) / data.length;
+
+            return {
+                rmsVolume: rms,
+                zeroCrossRate: zcr,
+                spectralCentroid: centroid,
+                energy: sumSquare
+            };
+        }
+
+        async function startRecording4s() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const mediaRecorder = new MediaRecorder(stream);
+                const chunks = [];
+
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.onstop = async () => {
+                    const blob = new Blob(chunks, { type: 'audio/webm' });
+                    
+                    const analysis = await analyzeAndMatchAudio(blob);
+                    
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = () => {
+                        const base64Audio = reader.result;
+                        window.myTotalScore = (window.myTotalScore || 0) + analysis.score;
+                        
+                        window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, analysis.score, analysis.isNoSound);
+                        
+                        document.getElementById('btn-record').disabled = true;
+                        document.getElementById('waiting-others-msg').style.display = 'block';
+                    };
+                };
+
+                mediaRecorder.start();
+                document.getElementById('btn-record').classList.add('recording');
+                let timeLeft = 4;
+                document.getElementById('recording-timer').innerText = `${timeLeft}`;
+
+                const timerInterval = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft > 0) {
+                        document.getElementById('recording-timer').innerText = `${timeLeft}`;
+                    } else {
+                        clearInterval(timerInterval);
+                        document.getElementById('recording-timer').innerText = `✔`;
+                        document.getElementById('btn-record').classList.remove('recording');
+                        mediaRecorder.stop();
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                }, 1000);
+
+            } catch(err) {
+                alert(window.currentLang === 'ar' ? "يرجى إعطاء صلاحية الميكروفون للعب!" : "Please allow mic permission!");
+            }
+        }
+
+        function hostTriggerListeningPhase() {
+            window.setStageStateInFirebase(currentRoom, "listening");
+        }
+
+        function hostAdvanceNextStage() {
+            const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
+            if (currentStageIndex + 1 < activeList.length) {
+                window.advanceRoomStage(currentRoom, currentStageIndex + 1);
+            } else {
+                window.endGameInFirebase(currentRoom);
+            }
+        }
+
+        window.startRoundRobinPlayback = async function(playersList) {
+            showScreen('screen-listening');
+            const t = translations[window.currentLang];
+            
+            const nextBtn = document.getElementById('btn-host-next-stage');
+            const waitTxt = document.getElementById('txt-waiting-next-stage');
+            if (nextBtn) nextBtn.style.display = 'none';
+            if (waitTxt) waitTxt.style.display = 'none';
+
+            for (let i = 0; i < playersList.length; i++) {
+                const player = playersList[i];
+                document.getElementById('current-speaker-avatar').src = player.avatar;
+                document.getElementById('current-speaker-name').innerText = player.name;
+
+                if (player.noSound) {
+                    document.getElementById('playback-status').innerText = "🔇 NO SOUND";
+                    document.getElementById('current-score-display').innerText = t.no_sound_txt;
+                    await new Promise(resolve => setTimeout(resolve, 2500));
+                } else {
+                    document.getElementById('playback-status').innerText = t.playing_audio;
+                    document.getElementById('current-score-display').innerText = `${t.match_score}: ${player.lastScore || 0}%`;
+
+                    if (player.lastAudio) {
+                        const audio = new Audio(player.lastAudio);
+                        await new Promise((resolve) => {
+                            audio.onended = resolve;
+                            audio.onerror = resolve;
+                            audio.play().catch(resolve);
+                        });
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                    }
+                }
+
+                document.getElementById('playback-status').innerText = t.waiting_audio_next;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            document.getElementById('playback-status').innerText = t.done_stage_audio;
+            
+            if (window.isHost) {
+                if (nextBtn) nextBtn.style.display = 'block';
+            } else {
+                if (waitTxt) waitTxt.style.display = 'block';
+            }
+        };
+
+        window.showResults = function(players) {
+            showScreen('screen-results');
+            const board = document.getElementById('final-leaderboard');
+            board.innerHTML = '';
+            const sorted = [...players].sort((a,b) => (b.score || 0) - (a.score || 0));
+            
+            sorted.forEach((p, idx) => {
+                board.innerHTML += `
+                    <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.05); padding:12px 15px; border-radius:12px; margin-bottom:10px; font-weight:700;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:1.2rem; color:var(--gold);">#${idx+1}</span>
+                            <img src="${p.avatar}" style="width:35px; height:35px; border-radius:50%;">
+                            <span>${p.name}</span>
+                        </div>
+                        <span style="color:var(--accent-color);">${p.score || 0} pts</span>
+                    </div>`;
+            });
+        };
+
+        function backToLobbyFromResults() {
+            window.myTotalScore = 0;
+            currentRoom = null;
+            showScreen('screen-lobby');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+        }
+    </script>
+</body>
+</html>
