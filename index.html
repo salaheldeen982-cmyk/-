@@ -63,6 +63,21 @@
         .settings-btns { display: flex; gap: 8px; }
         .icon-btn { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 12px; border-radius: 10px; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.85rem; }
 
+        .back-nav-btn {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            float: right;
+        }
+
         .container {
             background: var(--card-bg);
             backdrop-filter: blur(16px);
@@ -74,6 +89,7 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.3);
             text-align: center;
             margin-top: 20px;
+            position: relative;
         }
 
         .screen { display: none; }
@@ -227,6 +243,9 @@
         .add-friend-btn.is-friend {
             background: #3b82f6; cursor: default;
         }
+        .add-friend-btn.pending {
+            background: #f59e0b; cursor: default;
+        }
         .action-btn-danger {
             background: #ef4444; border: none; color: white; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; margin-right: 4px;
         }
@@ -303,6 +322,17 @@
             border-radius: 50%;
             object-fit: cover;
         }
+
+        /* تنبيه الطلبات المعلقة */
+        .friend-request-banner {
+            display: none;
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid var(--gold);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -320,6 +350,21 @@
     </div>
 
     <div class="container">
+        <!-- Global Back Navigation Button -->
+        <button id="global-back-btn" class="back-nav-btn" onclick="goBackPreviousScreen()">
+            <i class="fa-solid fa-arrow-right"></i> <span data-key="btn_back">رجوع</span>
+        </button>
+        <div style="clear: both;"></div>
+
+        <!-- Friend Requests Banner -->
+        <div id="friend-requests-banner" class="friend-request-banner">
+            <div id="friend-request-msg">يوجد طلب صداقة جديد!</div>
+            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 6px;">
+                <button class="add-friend-btn" onclick="acceptFriendRequestDirect()">قبول</button>
+                <button class="action-btn-danger" onclick="rejectFriendRequestDirect()">رفض</button>
+            </div>
+        </div>
+
         <!-- Screen 1: Login & Avatar Selection -->
         <div id="screen-login" class="screen active">
             <h2 style="margin-bottom: 20px;" data-key="welcome">تسجيل الدخول</h2>
@@ -456,7 +501,12 @@
         <div id="screen-results" class="screen">
             <h2 style="color: var(--gold);"><i class="fa-solid fa-trophy"></i> <span data-key="results_title">الترتيب النهائي</span></h2>
             <div id="final-leaderboard" style="list-style: none; padding: 0; margin: 15px 0;"></div>
-            <button class="btn-primary" onclick="backToLobbyFromResults()" data-key="btn_back_lobby">العودة إلى الردهة 🔄</button>
+            
+            <!-- أزرار الخيارات بعد نهاية اللعبة -->
+            <div style="display: flex; gap: 10px; flex-direction: column;">
+                <button class="btn-primary" style="background: #10b981;" onclick="rematchGame()" data-key="btn_rematch">إعادة اللعبة 🔄</button>
+                <button class="btn-primary" style="background: rgba(255,255,255,0.1); border: 1px solid var(--border-color);" onclick="backToLobbyFromResults()" data-key="btn_back_lobby">العودة إلى ساحة الانتظار 🚪</button>
+            </div>
         </div>
     </div>
 
@@ -532,6 +582,58 @@
         const userOnlineRef = ref(database, 'online_users/' + window.myDeviceId);
         set(userOnlineRef, { status: 'online', last_seen: Date.now() });
         onDisconnect(userOnlineRef).set({ status: 'offline', last_seen: Date.now() });
+
+        // استماع لطلبات الصداقة القادمة الحية
+        let pendingRequestSender = null;
+        onValue(ref(database, 'friend_requests/' + window.myDeviceId), (snapshot) => {
+            const req = snapshot.val();
+            if (req && req.senderId) {
+                pendingRequestSender = req;
+                document.getElementById('friend-request-msg').innerText = (window.currentLang==='ar' ? 'طلب صداقة من: ' : 'Friend request from: ') + req.senderName;
+                document.getElementById('friend-requests-banner').style.display = 'block';
+            } else {
+                document.getElementById('friend-requests-banner').style.display = 'none';
+            }
+        });
+
+        window.sendFriendRequestToFirebase = function(targetDeviceId, myName) {
+            set(ref(database, 'friend_requests/' + targetDeviceId), {
+                senderId: window.myDeviceId,
+                senderName: myName,
+                time: Date.now()
+            });
+        };
+
+        window.acceptFriendRequestDirect = function() {
+            if (pendingRequestSender) {
+                window.saveFriend({ id: pendingRequestSender.senderId, name: pendingRequestSender.senderName });
+                // إبلاغ المرسل بإنشاء الصداقة
+                set(ref(database, 'friend_accepts/' + pendingRequestSender.senderId + '/' + window.myDeviceId), {
+                    id: window.myDeviceId,
+                    name: window.username
+                });
+                remove(ref(database, 'friend_requests/' + window.myDeviceId));
+                alert(window.currentLang === 'ar' ? "تم قبول طلب الصداقة!" : "Friend request accepted!");
+            }
+        };
+
+        window.rejectFriendRequestDirect = function() {
+            if (pendingRequestSender) {
+                remove(ref(database, 'friend_requests/' + window.myDeviceId));
+            }
+        };
+
+        // استماع للقبول من الطرف الآخر
+        onValue(ref(database, 'friend_accepts/' + window.myDeviceId), (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                Object.values(data).forEach(friend => {
+                    window.saveFriend({ id: friend.id, name: friend.name });
+                    alert((window.currentLang==='ar'?'قبل ':'Accepted ') + friend.name + (window.currentLang==='ar'?' طلب صداقتك!':' your friend request!'));
+                });
+                remove(ref(database, 'friend_accepts/' + window.myDeviceId));
+            }
+        });
 
         window.checkUserOnlineStatus = function(deviceId, callback) {
             onValue(ref(database, 'online_users/' + deviceId), (snapshot) => {
@@ -672,6 +774,15 @@
             });
         };
 
+        // تسجيل التصويت على إعادة اللعبة Rematch
+        window.voteRematchInFirebase = function(roomCode) {
+            update(ref(database, `rooms/${roomCode}/rematchVotes/${window.myUID}`), {
+                name: window.username,
+                avatar: window.selectedAvatar,
+                deviceId: window.myDeviceId
+            });
+        };
+
         // Firebase Private Friend Chat
         window.sendPrivateChat = function(friendDeviceId, text, sticker = null) {
             const chatId = [window.myDeviceId, friendDeviceId].sort().join("_");
@@ -797,7 +908,8 @@
                 btn_next_stage: "الانتقال للمرحلة التالية ⏩",
                 txt_waiting_next: "في انتظار صاحب الغرفة للانتقال للمرحلة التالية...",
                 results_title: "الترتيب النهائي",
-                btn_back_lobby: "العودة إلى الردهة 🔄",
+                btn_back_lobby: "العودة إلى ساحة الانتظار 🚪",
+                btn_rematch: "إعادة اللعبة 🔄",
                 chat_title: "شات الغرفة",
                 chat_ph: "اكتب رسالة...",
                 host_tag: "المضيف",
@@ -846,7 +958,8 @@
                 btn_next_stage: "Next Stage ⏩",
                 txt_waiting_next: "Waiting for host to advance...",
                 results_title: "Final Leaderboard",
-                btn_back_lobby: "Back to Lobby 🔄",
+                btn_back_lobby: "Back to Lobby 🚪",
+                btn_rematch: "Rematch Game 🔄",
                 chat_title: "Room Chat",
                 chat_ph: "Type a message...",
                 host_tag: "Host",
@@ -913,6 +1026,7 @@
         ];
 
         let selectedAvatar = defaultAvatars[0].src;
+        window.selectedAvatar = selectedAvatar;
         let username = '';
         let currentRoom = null;
         let currentStageIndex = 0;
@@ -921,6 +1035,9 @@
         let selectedRoomType = 'public';
         let currentActiveFriendId = null;
         window.myTotalScore = 0;
+
+        // تتبع التاريخ للتنقل بالزر السهم
+        let navigationHistory = [];
 
         window.onload = () => {
             const grid = document.getElementById('avatar-grid');
@@ -939,6 +1056,7 @@
                 username = savedName;
                 window.username = savedName;
                 selectedAvatar = savedAvatar;
+                window.selectedAvatar = savedAvatar;
                 updateLobbyProfile();
                 showScreen('screen-lobby');
             }
@@ -1012,6 +1130,7 @@
             document.querySelectorAll('.avatar-item').forEach(e => e.classList.remove('selected'));
             el.classList.add('selected');
             selectedAvatar = src;
+            window.selectedAvatar = src;
         }
 
         function handleCustomAvatar(input) {
@@ -1019,6 +1138,7 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     selectedAvatar = e.target.result;
+                    window.selectedAvatar = selectedAvatar;
                     alert(window.currentLang === 'ar' ? "تم تحميل صورتك بنجاح!" : "Image uploaded successfully!");
                 };
                 reader.readAsDataURL(input.files[0]);
@@ -1026,15 +1146,40 @@
         }
 
         function showScreen(id) {
+            if (window.currentScreen && window.currentScreen !== id) {
+                navigationHistory.push(window.currentScreen);
+            }
             window.currentScreen = id;
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+
+            const backBtn = document.getElementById('global-back-btn');
+            if (id !== 'screen-login' && id !== 'screen-lobby') {
+                backBtn.style.display = 'flex';
+            } else {
+                backBtn.style.display = 'none';
+            }
 
             const chatBox = document.getElementById('global-chat-box');
             if(id !== 'screen-login' && id !== 'screen-lobby' && id !== 'screen-open-rooms') {
                 chatBox.style.display = 'block';
             } else {
                 chatBox.style.display = 'none';
+            }
+        }
+
+        function goBackPreviousScreen() {
+            if (navigationHistory.length > 0) {
+                const prev = navigationHistory.pop();
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById(prev).classList.add('active');
+                window.currentScreen = prev;
+                
+                if (prev === 'screen-lobby' || prev === 'screen-login') {
+                    document.getElementById('global-back-btn').style.display = 'none';
+                }
+            } else {
+                showScreen('screen-lobby');
             }
         }
 
@@ -1148,13 +1293,13 @@
             return JSON.parse(localStorage.getItem('sarhan_party_blocked') || '[]');
         }
 
-        function saveFriend(friendObj) {
+        window.saveFriend = function(friendObj) {
             const friends = getMyFriends();
             if(!friends.some(f => f.id === friendObj.id)) {
                 friends.push(friendObj);
                 localStorage.setItem('sarhan_party_friends', JSON.stringify(friends));
             }
-        }
+        };
 
         function removeFriend(friendId) {
             let friends = getMyFriends();
@@ -1187,18 +1332,15 @@
                 alert(window.currentLang === 'ar' ? "لا يمكنك إضافة نفسك!" : "You cannot add yourself!");
                 return;
             }
-            saveFriend({ id: targetId, name: "صديق " + targetId });
+            window.sendFriendRequestToFirebase(targetId, window.username);
             input.value = '';
-            renderFriendsList();
-            if (window.roomPlayersList) window.renderRoomPlayers(window.roomPlayersList);
-            alert(window.currentLang === 'ar' ? "تمت إضافة الصديق بنجاح!" : "Friend added successfully!");
+            alert(window.currentLang === 'ar' ? "تم إرسال طلب الصداقة! بانتظار موافقة الطرف الآخر..." : "Friend request sent! Waiting for approval...");
         }
 
         function addFriendFromRoom(friendDeviceId, friendName) {
             if(friendDeviceId === window.myDeviceId) return;
-            saveFriend({ id: friendDeviceId, name: friendName });
-            if (window.roomPlayersList) window.renderRoomPlayers(window.roomPlayersList);
-            alert((window.currentLang === 'ar' ? "تمت إضافة " : "Added ") + friendName);
+            window.sendFriendRequestToFirebase(friendDeviceId, window.username);
+            alert(window.currentLang === 'ar' ? "تم إرسال طلب الصداقة لـ " + friendName + "! بانتظار موافقته..." : "Friend request sent to " + friendName + "!");
         }
 
         function openFriendsModal() {
@@ -1686,6 +1828,22 @@
                     </div>`;
             });
         };
+
+        // وظيفة إعادة اللعبة مع اللاعبين الراغبين فقط
+        async function rematchGame() {
+            window.voteRematchInFirebase(currentRoom);
+            alert(window.currentLang === 'ar' ? "تم تسجيل اختيارك لإعادة اللعبة! جاري إنشاء غرفة جديدة لك وللراغبين..." : "Registered for rematch! Creating room for interested players...");
+            
+            // تحقق إن كان هناك لاعبون آخرون اختاروا إعادة اللعبة
+            setTimeout(async () => {
+                if (window.roomPlayersList && window.roomPlayersList.length > 1) {
+                    await createRoom();
+                } else {
+                    alert(window.currentLang === 'ar' ? "لم يقتنع بقية اللاعبين بالإعادة أو أنك الشخص الوحيد، سيتم توجيهك تلقائياً لساحة الانتظار." : "You are the only one who chose rematch. Returning to lobby.");
+                    backToLobbyFromResults();
+                }
+            }, 1200);
+        }
 
         function backToLobbyFromResults() {
             window.myTotalScore = 0;
