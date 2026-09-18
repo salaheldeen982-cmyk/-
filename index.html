@@ -488,7 +488,7 @@
                 </div>
 
                 <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 10px;" data-key="record_instruction">اضغط على الميكروفون للتقليد (4 ثوانٍ):</p>
-                <button class="record-btn" id="btn-record" onclick="requestMicPermissionAndRecord()">
+                <button class="record-btn" id="btn-record" onclick="startRecording4s()">
                     <i class="fa-solid fa-microphone"></i>
                 </button>
                 <div id="recording-timer" style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 10px;"></div>
@@ -1734,22 +1734,6 @@
                 console.warn("Waveform matching analysis fallback:", e);
                 return { isNoSound: false, score: 50, userWaveform: [], targetWaveform: [] };
             }
-        }
-
-        // طلب إذن الميكروفون المباشر وتأكيده للأنظمة المختلفة
-        async function requestMicPermissionAndRecord() {
-            if (navigator.permissions && navigator.permissions.query) {
-                try {
-                    const result = await navigator.permissions.query({ name: 'microphone' });
-                    if (result.state === 'denied') {
-                        alert(window.currentLang === 'ar' ? "يرجى منح إذن الميكروفون من إعدادات التطبيق أو الجهاز للتمكن من اللعب!" : "Please enable Microphone permission from device settings!");
-                        return;
-                    }
-                } catch (e) {
-                    console.log("Permission query fallback:", e);
-                }
-            }
-            startRecording4s();
         }
 
         async function startRecording4s() {
