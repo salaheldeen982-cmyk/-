@@ -747,11 +747,12 @@
             return true;
         };
 
-        // تصفية الغرف المفتوحة الحقيقية وتجنب ظهور الغرف الوهمية أو المهجورة
+        // تصفية الغرف المفتوحة الحقيقية وتجنب ظهور الغرف الوهمية أو المهجورة أو المكررة
         window.fetchOpenRooms = function(callback) {
             onValue(ref(database, 'rooms'), (snapshot) => {
                 const data = snapshot.val();
                 const openRooms = [];
+                const seenRooms = new Set();
                 if(data) {
                     Object.keys(data).forEach(code => {
                         const r = data[code];
@@ -759,13 +760,19 @@
                             const playersArr = Object.values(r.players);
                             const hasHost = playersArr.some(p => p.host === true);
                             
-                            // الغرفة تكون حقيقية فقط إن كان بها لاعبون والمضيف متواجد ولم يمر عليها زمن طويل بدون نشاط
+                            // الغرفة تكون حقيقية فقط إن كان بها لاعبون والمضيف متواجد وغير مكررة ولم يمر عليها زمن طويل بدون نشاط
                             if (hasHost && playersArr.length > 0 && (Date.now() - (r.createdAt || 0) < 86400000)) {
-                                openRooms.push({ code, count: playersArr.length });
+                                if (!seenRooms.has(code)) {
+                                    seenRooms.add(code);
+                                    openRooms.push({ code, count: playersArr.length });
+                                }
                             } else if (!hasHost) {
                                 // تنظيف الغرفة الوهمية ذاتياً من الداتابيز
                                 remove(ref(database, 'rooms/' + code));
                             }
+                        } else if (r && (!r.players || Object.keys(r.players).length === 0)) {
+                            // إزالة أي غرفة فارغة ليس بها لاعبون أصلًا
+                            remove(ref(database, 'rooms/' + code));
                         }
                     });
                 }
