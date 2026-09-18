@@ -1592,7 +1592,7 @@
                 currentAudioObject = new Audio(currentSound.src);
                 currentAudioObject.play().catch(err => console.error("Audio error:", err));
 
-                // استخراج ورسم شريط التردد للمقطع الأصلي فور التشغيل
+                // التعديل الثاني: استخراج ورسم شريط التردد للمقطع الأصلي فور التشغيل
                 document.getElementById('target-waveform-box').style.display = 'block';
                 const wfData = await extractWaveformDataFromUrl(currentSound.src);
                 drawWaveform('target-waveform-canvas', wfData, '#8b5cf6');
@@ -1699,7 +1699,7 @@
             }
         }
 
-        // خوارزمية مطابقة شكل شريط التردد بين المقطع المسجل والمقطع الأصلي بصعوبة من 1% إلى 100%
+        // التعديل الثاني: خوارزمية مطابقة شكل شريط التردد بين المقطع المسجل والمقطع الأصلي بصرياً وتناسق أشكال التردد
         async function analyzeAndMatchAudio(recordedBlob) {
             try {
                 const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
@@ -1711,33 +1711,28 @@
 
                 // فحص عدم التواجد الكامل للصوت
                 const userEnergy = userWaveform.reduce((a, b) => a + b, 0);
-                if (userEnergy < 0.8) {
+                if (userEnergy < 1.5) {
                     return { isNoSound: true, score: 0, userWaveform, targetWaveform };
                 }
 
-                // حساب التفاوت والدقة الشديدة بين أشكال الأعمدة الترددية (Shape Strict Correlation)
+                // حساب مدى التطابق الشكلي (Visual/Shape Correlation) بين شريطي التردد
                 let shapeDifferenceSum = 0;
-                let peakDiffSum = 0;
-
                 for (let i = 0; i < targetWaveform.length; i++) {
                     const diff = Math.abs((targetWaveform[i] || 0) - (userWaveform[i] || 0));
-                    // مضاعفة التأثير على الاختلافات الشديدة لزيادة صعوبة الوصول للنسب المرتفعة
-                    shapeDifferenceSum += Math.pow(diff, 1.4);
+                    shapeDifferenceSum += diff;
                 }
 
-                const averageShapeDiff = shapeDifferenceSum / targetWaveform.length;
+                const averageShapeDifference = shapeDifferenceSum / targetWaveform.length;
 
-                // تحويل المقياس الرياضي بحساسية عالية جداً تجعل الوصول للنسب الممتازة يتم بصعوبة
-                let rawMatch = 100 * Math.exp(-2.6 * averageShapeDiff);
-
-                // تطبيق حدود النسبة لتتدرج بدقة من 1% حتى 100%
-                let visualMatchScore = Math.max(1, Math.min(100, Math.round(rawMatch)));
+                // تحويل الفارق الشكلي إلى نسبة مئوية للمطابقة
+                let visualMatchScore = Math.max(0, 100 - (averageShapeDifference * 110));
+                visualMatchScore = Math.max(10, Math.min(99, Math.round(visualMatchScore)));
 
                 return { isNoSound: false, score: visualMatchScore, userWaveform, targetWaveform };
 
             } catch (e) {
                 console.warn("Waveform matching analysis fallback:", e);
-                return { isNoSound: false, score: 1, userWaveform: [], targetWaveform: [] };
+                return { isNoSound: false, score: 50, userWaveform: [], targetWaveform: [] };
             }
         }
 
