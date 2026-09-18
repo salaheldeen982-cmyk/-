@@ -333,6 +333,29 @@
             margin-bottom: 15px;
             font-size: 0.85rem;
         }
+
+        /* أنماط أشرطة الترددات الصوتية Visual Waveforms */
+        .waveform-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px;
+            margin: 10px 0;
+            text-align: right;
+        }
+        .waveform-label {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        canvas.waveform-canvas {
+            width: 100%;
+            height: 50px;
+            display: block;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 6px;
+        }
     </style>
 </head>
 <body>
@@ -457,11 +480,24 @@
                 <button class="btn-primary" style="margin-bottom: 15px;" onclick="playTargetSound()" data-key="btn_play_sound">
                     <i class="fa-solid fa-volume-high"></i> تشغيل الصوت المطلوب
                 </button>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;" data-key="record_instruction">اضغط على الميكروفون للتقليد (4 ثوانٍ):</p>
+                
+                <!-- شريط التردد للمقطع الأصلي -->
+                <div class="waveform-container" id="target-waveform-box" style="display:none;">
+                    <div class="waveform-label"><i class="fa-solid fa-wave-square"></i> شريط تردد المقطع الأصلي:</div>
+                    <canvas id="target-waveform-canvas" class="waveform-canvas"></canvas>
+                </div>
+
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 10px;" data-key="record_instruction">اضغط على الميكروفون للتقليد (4 ثوانٍ):</p>
                 <button class="record-btn" id="btn-record" onclick="startRecording4s()">
                     <i class="fa-solid fa-microphone"></i>
                 </button>
                 <div id="recording-timer" style="font-size: 1.2rem; font-weight: bold; color: #ef4444; margin-top: 10px;"></div>
+                
+                <!-- شريط التردد الخاص بصوت المستخدم المسجل -->
+                <div class="waveform-container" id="user-waveform-box" style="display:none;">
+                    <div class="waveform-label"><i class="fa-solid fa-microphone-lines"></i> شريط تردد صوتك المسجل:</div>
+                    <canvas id="user-waveform-canvas" class="waveform-canvas"></canvas>
+                </div>
             </div>
 
             <div id="waiting-others-msg" style="display:none; color: var(--gold); font-weight: bold; margin-top: 15px;" data-key="waiting_others">
@@ -488,7 +524,14 @@
                 <img id="current-speaker-avatar" src="" style="width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--accent-color); margin-bottom: 10px;">
                 <h4 id="current-speaker-name" style="font-size: 1.3rem;">اسم اللاعب</h4>
                 <div id="playback-status" style="margin: 15px 0; font-size: 1rem; color: var(--gold);">في الانتظار...</div>
-                <div id="current-score-display" style="font-weight: bold; font-size: 1.1rem; color: #10b981;"></div>
+                
+                <!-- عرض مقارنة الترددين أثناء فترة الاستماع -->
+                <div class="waveform-container" id="listen-waveform-box" style="display:none;">
+                    <div class="waveform-label"><i class="fa-solid fa-wave-square"></i> شريط التردد للتسجيل الحالي:</div>
+                    <canvas id="listen-waveform-canvas" class="waveform-canvas"></canvas>
+                </div>
+
+                <div id="current-score-display" style="font-weight: bold; font-size: 1.1rem; color: #10b981; margin-top: 8px;"></div>
             </div>
 
             <button class="btn-primary" id="btn-host-next-stage" style="display:none; background: var(--gradient);" onclick="hostAdvanceNextStage()" data-key="btn_next_stage">
@@ -731,7 +774,12 @@
         };
 
         window.sendChatToFirebase = function(roomCode, senderName, text, stickerEmoji = null) {
-            if(!roomCode || (!text.trim() && !stickerEmoji)) return;
+            if(!roomCode) return;
+            // قيود التعديل الأول: شات الغرفة لا يفتح أو يرسل إلا بعد دخول الغرفة بالفعل
+            if(!window.currentRoom || window.currentScreen === 'screen-lobby' || window.currentScreen === 'screen-login' || window.currentScreen === 'screen-open-rooms') {
+                return;
+            }
+            if(!text.trim() && !stickerEmoji) return;
             const chatRef = ref(database, `rooms/${roomCode}/chat`);
             push(chatRef, {
                 sender: senderName,
@@ -745,13 +793,14 @@
             update(ref(database, `rooms/${roomCode}`), { status: "playing", currentStage: 0, stageState: "recording" });
         };
 
-        window.submitStageAudio = function(roomCode, stageIndex, audioBase64, score, isNoSound = false) {
+        window.submitStageAudio = function(roomCode, stageIndex, audioBase64, score, isNoSound = false, waveformData = []) {
             if (!window.myUID || !roomCode) return;
             update(ref(database, `rooms/${roomCode}/players/${window.myUID}`), { 
                 submittedStage: stageIndex,
                 lastAudio: audioBase64,
                 lastScore: score,
                 noSound: isNoSound,
+                lastWaveform: waveformData,
                 score: (window.myTotalScore || 0)
             });
         };
@@ -917,7 +966,7 @@
                 playing_audio: "🔊 جاري تشغيل الصوت...",
                 waiting_audio_next: "⏳ انتهاء الصوت.. انتظار ثانية واحدة...",
                 done_stage_audio: "✅ اكتملت جميع الأصوات للمرحلة الحالية!",
-                match_score: "نسبة تطابق الصوت المعيارية",
+                match_score: "نسبة مطابقة شريط التردد شكلياً",
                 status_online: "متصل الآن",
                 no_sound_txt: "NO SOUND (لم يتم كشف صوت)",
                 type_public: "عامة",
@@ -967,7 +1016,7 @@
                 playing_audio: "🔊 Playing Audio...",
                 waiting_audio_next: "⏳ Finished audio.. Waiting 1 sec...",
                 done_stage_audio: "✅ All recordings played for this stage!",
-                match_score: "Standard Audio Match Score",
+                match_score: "Visual Waveform Match Score",
                 status_online: "Online Now",
                 no_sound_txt: "NO SOUND (No Audio Detected)",
                 type_public: "Public",
@@ -1036,7 +1085,7 @@
         let currentActiveFriendId = null;
         window.myTotalScore = 0;
 
-        // تتبع التاريخ للتنقل بالزر السهم
+        // التاريخ للتنقل بالزر السهم
         let navigationHistory = [];
 
         window.onload = () => {
@@ -1160,6 +1209,7 @@
                 backBtn.style.display = 'none';
             }
 
+            // قيود التعديل الأول: عدم فتح شات الغرفة إلا بعد دخول الغرفة
             const chatBox = document.getElementById('global-chat-box');
             if(id !== 'screen-login' && id !== 'screen-lobby' && id !== 'screen-open-rooms') {
                 chatBox.style.display = 'block';
@@ -1214,6 +1264,7 @@
 
             const isPublic = selectedRoomType === 'public';
             currentRoom = Math.floor(1000 + Math.random() * 9000).toString();
+            window.currentRoom = currentRoom;
             
             document.getElementById('display-room-code').innerText = currentRoom;
             document.getElementById('room-privacy-type').innerText = isPublic 
@@ -1240,6 +1291,7 @@
             document.getElementById('btn-join-room').disabled = true;
 
             currentRoom = code;
+            window.currentRoom = currentRoom;
 
             document.getElementById('btn-start-game').style.display = 'none';
             document.getElementById('txt-waiting-host').style.display = 'block';
@@ -1284,7 +1336,7 @@
             joinRoom();
         }
 
-        // نظام إدارة الأصدقاء، الحظر وإلغاء الصداقة
+        // إدارة الأصدقاء
         function getMyFriends() {
             return JSON.parse(localStorage.getItem('sarhan_party_friends') || '[]');
         }
@@ -1437,7 +1489,6 @@
             container.scrollTop = container.scrollHeight;
         };
 
-        // تحديث وتجهيز شريط الأعضاء المتواجدين حياً داخل أشرطة اللعب
         window.updateInGamePlayersBar = function(playersArr, currentStage = 0) {
             const containers = [
                 document.getElementById('game-active-players-bar'),
@@ -1522,13 +1573,15 @@
             document.getElementById('btn-record').disabled = false;
             document.getElementById('waiting-others-msg').style.display = 'none';
             document.getElementById('recording-timer').innerText = '';
+            document.getElementById('target-waveform-box').style.display = 'none';
+            document.getElementById('user-waveform-box').style.display = 'none';
 
             if(!window.isHost) {
                 document.getElementById('txt-waiting-listening').style.display = 'block';
             }
         }
 
-        function playTargetSound() {
+        async function playTargetSound() {
             const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
             const currentSound = activeList[currentStageIndex];
             if (currentSound && currentSound.src) {
@@ -1538,10 +1591,14 @@
                 }
                 currentAudioObject = new Audio(currentSound.src);
                 currentAudioObject.play().catch(err => console.error("Audio error:", err));
+
+                // التعديل الثاني: استخراج ورسم شريط التردد للمقطع الأصلي فور التشغيل
+                document.getElementById('target-waveform-box').style.display = 'block';
+                const wfData = await extractWaveformDataFromUrl(currentSound.src);
+                drawWaveform('target-waveform-canvas', wfData, '#8b5cf6');
             }
         }
 
-        // قص الصمت في البداية والنهاية لضمان تطابق زمني دقيق للترددات
         function trimAudioSilence(channelData, threshold = 0.012) {
             let start = 0;
             let end = channelData.length - 1;
@@ -1557,149 +1614,126 @@
             return channelData.subarray(start, end + 1);
         }
 
-        // خوارزمية تحليل ومطابقة الصوت بالذكاء الاصطناعي ومعالجة الإشارات الصوتية القياسية (Acoustic Feature Comparison Engine)
+        // استخراج مصفوفة الترددات البصرية من رابط ملف صوتي
+        async function extractWaveformDataFromUrl(url) {
+            try {
+                const response = await fetch(url);
+                const arrayBuf = await response.arrayBuffer();
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+                const rawData = audioBuffer.getChannelData(0);
+                const trimmed = trimAudioSilence(rawData);
+                const barsCount = 60;
+                const samplesPerBar = Math.floor(trimmed.length / barsCount);
+                const waveform = [];
+
+                for (let i = 0; i < barsCount; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < samplesPerBar; j++) {
+                        sum += Math.abs(trimmed[i * samplesPerBar + j] || 0);
+                    }
+                    waveform.push(sum / samplesPerBar);
+                }
+
+                // تطبيع القيم من 0 إلى 1
+                const maxVal = Math.max(...waveform) || 1;
+                audioCtx.close();
+                return waveform.map(v => v / maxVal);
+            } catch(e) {
+                console.warn("Waveform extraction error:", e);
+                return new Array(60).fill(0.2);
+            }
+        }
+
+        // استخراج مصفوفة الترددات من Blob بصوت المسجل
+        async function extractWaveformDataFromBlob(recordedBlob) {
+            try {
+                const arrayBuf = await recordedBlob.arrayBuffer();
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+                const rawData = audioBuffer.getChannelData(0);
+                const trimmed = trimAudioSilence(rawData);
+                const barsCount = 60;
+                const samplesPerBar = Math.floor(trimmed.length / barsCount);
+                const waveform = [];
+
+                for (let i = 0; i < barsCount; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < samplesPerBar; j++) {
+                        sum += Math.abs(trimmed[i * samplesPerBar + j] || 0);
+                    }
+                    waveform.push(sum / samplesPerBar);
+                }
+
+                const maxVal = Math.max(...waveform) || 1;
+                audioCtx.close();
+                return waveform.map(v => v / maxVal);
+            } catch(e) {
+                return new Array(60).fill(0.1);
+            }
+        }
+
+        // رسم شريط التردد (Waveform Canvas) شكلياً ورسومياً
+        function drawWaveform(canvasId, waveformData, strokeColor = '#8b5cf6') {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth || 300;
+            canvas.height = 50;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            ctx.clearRect(0, 0, width, height);
+
+            const barWidth = width / waveformData.length;
+            ctx.fillStyle = strokeColor;
+
+            for (let i = 0; i < waveformData.length; i++) {
+                const barHeight = Math.max(4, waveformData[i] * (height - 8));
+                const x = i * barWidth;
+                const y = (height - barHeight) / 2;
+
+                ctx.beginPath();
+                ctx.roundRect(x + 1, y, Math.max(2, barWidth - 2), barHeight, 2);
+                ctx.fill();
+            }
+        }
+
+        // التعديل الثاني: خوارزمية مطابقة شكل شريط التردد بين المقطع المسجل والمقطع الأصلي بصرياً وتناسق أشكال التردد
         async function analyzeAndMatchAudio(recordedBlob) {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const recordedBuffer = await audioCtx.decodeAudioData(await recordedBlob.arrayBuffer());
-                
                 const activeList = window.selectedSoundsForGame || selectedSoundsForGame;
                 const currentSound = activeList[currentStageIndex];
                 
-                const targetResponse = await fetch(currentSound.src);
-                const targetArrayBuffer = await targetResponse.arrayBuffer();
-                const targetBuffer = await audioCtx.decodeAudioData(targetArrayBuffer);
+                // استخراج شريطي التردد كشكلين هندسيين (Shape Envelopes)
+                const targetWaveform = await extractWaveformDataFromUrl(currentSound.src);
+                const userWaveform = await extractWaveformDataFromBlob(recordedBlob);
 
-                const recRawData = recordedBuffer.getChannelData(0);
-                const recTrimmed = trimAudioSilence(recRawData);
-
-                // فحص عدم وجود صوت أو انخفاض مستويات الطاقة
-                let totalEnergy = 0;
-                for (let i = 0; i < recTrimmed.length; i++) {
-                    totalEnergy += recTrimmed[i] * recTrimmed[i];
-                }
-                const rmsVolume = Math.sqrt(totalEnergy / (recTrimmed.length || 1));
-
-                if (rmsVolume < 0.012 || recTrimmed.length < 1000) {
-                    audioCtx.close();
-                    return { isNoSound: true, score: 0 };
+                // فحص عدم التواجد الكامل للصوت
+                const userEnergy = userWaveform.reduce((a, b) => a + b, 0);
+                if (userEnergy < 1.5) {
+                    return { isNoSound: true, score: 0, userWaveform, targetWaveform };
                 }
 
-                const targetRawData = targetBuffer.getChannelData(0);
-                const targetTrimmed = trimAudioSilence(targetRawData);
-
-                // تقسيم الصوت لـ 25 إطارًا زمنيًا متساويًا لمقارنة ديناميكية للترددات والشدة
-                const FRAMES = 25;
-                const recProfile = extractFramedAcousticFeatures(recTrimmed, FRAMES);
-                const targetProfile = extractFramedAcousticFeatures(targetTrimmed, FRAMES);
-
-                audioCtx.close();
-
-                // حساب متوسط الفروق المطلقة للخصائص الصوتية عبر الزمن
-                let totalRmsDiff = 0;
-                let totalZcrDiff = 0;
-                let totalPitchDiff = 0;
-
-                for (let f = 0; f < FRAMES; f++) {
-                    totalRmsDiff += Math.abs(recProfile.rms[f] - targetProfile.rms[f]);
-                    totalZcrDiff += Math.abs(recProfile.zcr[f] - targetProfile.zcr[f]);
-                    totalPitchDiff += Math.abs(recProfile.pitch[f] - targetProfile.pitch[f]);
+                // حساب مدى التطابق الشكلي (Visual/Shape Correlation) بين شريطي التردد
+                let shapeDifferenceSum = 0;
+                for (let i = 0; i < targetWaveform.length; i++) {
+                    const diff = Math.abs((targetWaveform[i] || 0) - (userWaveform[i] || 0));
+                    shapeDifferenceSum += diff;
                 }
 
-                const avgRmsDiff = totalRmsDiff / FRAMES;
-                const avgZcrDiff = totalZcrDiff / FRAMES;
-                const avgPitchDiff = totalPitchDiff / FRAMES;
+                const averageShapeDifference = shapeDifferenceSum / targetWaveform.length;
 
-                // احتساب درجات التطابق الثلاثية مع معايير علم الصوتيات
-                const energyScore = Math.max(0, 100 - (avgRmsDiff * 380));
-                const frequencyScore = Math.max(0, 100 - (avgZcrDiff * 420));
-                const pitchCadenceScore = Math.max(0, 100 - (avgPitchDiff * 250));
+                // تحويل الفارق الشكلي إلى نسبة مئوية للمطابقة
+                let visualMatchScore = Math.max(0, 100 - (averageShapeDifference * 110));
+                visualMatchScore = Math.max(10, Math.min(99, Math.round(visualMatchScore)));
 
-                // الدرجة المركبة الواقعية
-                let matchScore = (energyScore * 0.30) + (frequencyScore * 0.40) + (pitchCadenceScore * 0.30);
-                matchScore = Math.max(15, Math.min(99, Math.round(matchScore)));
-
-                return { isNoSound: false, score: matchScore };
+                return { isNoSound: false, score: visualMatchScore, userWaveform, targetWaveform };
 
             } catch (e) {
-                console.warn("AI Audio Matching analysis fallback:", e);
-                return { isNoSound: false, score: 55 };
+                console.warn("Waveform matching analysis fallback:", e);
+                return { isNoSound: false, score: 50, userWaveform: [], targetWaveform: [] };
             }
-        }
-
-        // استخراج خصائص الإطارات الصوتية الصوتية القياسية (Framed Energy + Zero Crossings + Autocorrelation Pitch)
-        function extractFramedAcousticFeatures(data, frameCount) {
-            const frameSize = Math.floor(data.length / frameCount);
-            const rmsArr = [];
-            const zcrArr = [];
-            const pitchArr = [];
-
-            for (let f = 0; f < frameCount; f++) {
-                const start = f * frameSize;
-                const end = start + frameSize;
-                let frameSumSq = 0;
-                let zcCount = 0;
-
-                for (let i = start; i < end; i++) {
-                    frameSumSq += data[i] * data[i];
-                    if (i > start && ((data[i] >= 0 && data[i-1] < 0) || (data[i] < 0 && data[i-1] >= 0))) {
-                        zcCount++;
-                    }
-                }
-
-                const frameRms = Math.sqrt(frameSumSq / (frameSize || 1));
-                const frameZcr = zcCount / (frameSize || 1);
-
-                // تقريب Pitch عبر Autocorrelation بسيط داخل الإطار
-                let maxCorr = 0;
-                let bestLag = 0;
-                const maxLag = Math.min(250, Math.floor(frameSize / 2));
-                for (let lag = 20; lag < maxLag; lag += 2) {
-                    let corr = 0;
-                    for (let i = start; i < end - lag; i++) {
-                        corr += data[i] * data[i + lag];
-                    }
-                    if (corr > maxCorr) {
-                        maxCorr = corr;
-                        bestLag = lag;
-                    }
-                }
-
-                const normPitch = bestLag > 0 ? (1 / bestLag) : 0;
-
-                rmsArr.push(frameRms);
-                zcrArr.push(frameZcr);
-                pitchArr.push(normPitch);
-            }
-
-            return { rms: rmsArr, zcr: zcrArr, pitch: pitchArr };
-        }
-
-        // استخراج خصائص الترددات وطبقات الصوت القديمة للحفاظ على بنية الدوال
-        function extractAdvancedAudioFeatures(buffer) {
-            const data = buffer.getChannelData(0);
-            let sumSquare = 0;
-            let zeroCrossings = 0;
-            let spectralSum = 0;
-
-            for (let i = 0; i < data.length; i++) {
-                sumSquare += data[i] * data[i];
-                if (i > 0 && ((data[i] >= 0 && data[i-1] < 0) || (data[i] < 0 && data[i-1] >= 0))) {
-                    zeroCrossings++;
-                }
-                spectralSum += Math.abs(data[i]) * i;
-            }
-
-            const rms = Math.sqrt(sumSquare / data.length);
-            const zcr = zeroCrossings / data.length;
-            const centroid = spectralSum / (sumSquare + 0.0001) / data.length;
-
-            return {
-                rmsVolume: rms,
-                zeroCrossRate: zcr,
-                spectralCentroid: centroid,
-                energy: sumSquare
-            };
         }
 
         async function startRecording4s() {
@@ -1714,13 +1748,19 @@
                     
                     const analysis = await analyzeAndMatchAudio(blob);
                     
+                    // رسم شريط تردد صوت المستخدم المباشر
+                    if(analysis.userWaveform && analysis.userWaveform.length > 0) {
+                        document.getElementById('user-waveform-box').style.display = 'block';
+                        drawWaveform('user-waveform-canvas', analysis.userWaveform, '#10b981');
+                    }
+
                     const reader = new FileReader();
                     reader.readAsDataURL(blob);
                     reader.onloadend = () => {
                         const base64Audio = reader.result;
                         window.myTotalScore = (window.myTotalScore || 0) + analysis.score;
                         
-                        window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, analysis.score, analysis.isNoSound);
+                        window.submitStageAudio(currentRoom, currentStageIndex, base64Audio, analysis.score, analysis.isNoSound, analysis.userWaveform);
                         
                         document.getElementById('btn-record').disabled = true;
                         document.getElementById('waiting-others-msg').style.display = 'block';
@@ -1777,6 +1817,13 @@
                 document.getElementById('current-speaker-avatar').src = player.avatar;
                 document.getElementById('current-speaker-name').innerText = player.name;
 
+                if (player.lastWaveform && player.lastWaveform.length > 0) {
+                    document.getElementById('listen-waveform-box').style.display = 'block';
+                    drawWaveform('listen-waveform-canvas', player.lastWaveform, '#f59e0b');
+                } else {
+                    document.getElementById('listen-waveform-box').style.display = 'none';
+                }
+
                 if (player.noSound) {
                     document.getElementById('playback-status').innerText = "🔇 NO SOUND";
                     document.getElementById('current-score-display').innerText = t.no_sound_txt;
@@ -1829,12 +1876,10 @@
             });
         };
 
-        // وظيفة إعادة اللعبة مع اللاعبين الراغبين فقط
         async function rematchGame() {
             window.voteRematchInFirebase(currentRoom);
             alert(window.currentLang === 'ar' ? "تم تسجيل اختيارك لإعادة اللعبة! جاري إنشاء غرفة جديدة لك وللراغبين..." : "Registered for rematch! Creating room for interested players...");
             
-            // تحقق إن كان هناك لاعبون آخرون اختاروا إعادة اللعبة
             setTimeout(async () => {
                 if (window.roomPlayersList && window.roomPlayersList.length > 1) {
                     await createRoom();
@@ -1848,6 +1893,7 @@
         function backToLobbyFromResults() {
             window.myTotalScore = 0;
             currentRoom = null;
+            window.currentRoom = null;
             showScreen('screen-lobby');
         }
 
